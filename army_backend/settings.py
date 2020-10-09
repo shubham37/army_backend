@@ -44,6 +44,7 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
+    'accounts',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -63,8 +64,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'army_backend.urls'
+CORS_ORIGIN_WHITELIST = os.getenv('CORS_ORIGIN_WHITELIST')
+CORS_ORIGIN_ALLOW_ALL = True
 
+ROOT_URLCONF = 'army_backend.urls'
+AUTH_USER_MODEL = 'accounts.User'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
