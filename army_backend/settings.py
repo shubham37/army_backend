@@ -44,7 +44,10 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
-    'accounts',
+    'api',
+    'student',
+    'assessor',
+    'admin_user',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -68,7 +71,7 @@ CORS_ORIGIN_WHITELIST = os.getenv('CORS_ORIGIN_WHITELIST')
 CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = 'army_backend.urls'
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = 'api.User'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

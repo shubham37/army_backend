@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.conf.urls import url, include
-from accounts.views import Signup, Login,  ForgotPassword, ResetPassword
+from api.views import Signup, Login,  ForgotPassword, ResetPassword
 
 urlpatterns = [
     url(r'^signup/', Signup.as_view(), name='signup_student'),
