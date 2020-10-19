@@ -132,13 +132,15 @@ class Student(models.Model):
 
 
 
-class TestSchedule(models.Model):
+class StreamSchedule(models.Model):
     student = models.ForeignKey(Student, on_delete=models.ForeignKey, null=True, blank=True)
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
     start_time = models.DateTimeField(verbose_name='Start Time')
     end_time = models.DateTimeField(verbose_name='End Time')
+    subject = models.CharField(max_length=128)
 
-
+    def __str__(self):
+        return str(self.subject) + '--' + str(self.assessor.department)
 
 class Status:
     PENDING=1
@@ -161,6 +163,25 @@ class Test(models.Model):
 
     def __str__(self):
         return str(self.identifier)
+
+
+class PsychTestQuestion(models.Model):
+    code = models.CharField(verbose_name='Psych Test Code', max_length=10)
+    # image = 
+    qusetion = models.CharField(verbose_name='Psych Test Code', max_length=128, null=True, blank=True)
+
+    def __str__(self):
+        return self.code
+
+
+class PsychTestSubmission(models.Model):
+    code = models.CharField(verbose_name='Psych Test Code', max_length=10)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    answer = models.TextField(verbose_name='Test Answer')
+
+    def __str__(self):
+        return self.code
+
 
 class ProgressReport(models.Model):
     assessor = models.ForeignKey(Assessor,  on_delete=models.CASCADE)

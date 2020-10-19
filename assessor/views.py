@@ -7,8 +7,10 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import action
 
-from assessor.models import Availability, Briefcase
-from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer
+from assessor.models import Availability, Briefcase, Assessor
+from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer, \
+    AssessorSerializer
+from api.permissions import IsAssessorAuthenticated
 
 
 class AvailabilityViewSet(ViewSet):
@@ -44,6 +46,27 @@ class AvailabilityViewSet(ViewSet):
             return Response(serialized.data, status=status.HTTP_200_OK)
         return Response("No Data", status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=True, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
+    def add_availability(self, request):
+        schedules = request.data.get('schedules')
+        user = request.user
+        try:
+            assessor = Assessor.objects.get(user=user)
+            availabilities = Availability.objects.filter(assessor=assessor)
+            for schedule in schedules:
+                import ipdb ; ipdb.set_trace()
+                schedule['student'] = student
+                schedule['assessor'] = assessor
+                serialize = self.serializer_class(schedule)
+                try:
+                    if serialize.is_valid():
+                        serialize.save()
+                except Exception as e:
+                    print(e)
+            return Response(data={"detail":"Data Update Successfully."}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
+
     # list of collection related to user
     @action(detail=True,methods=['GET'])
     def assessor_list(self, request, pk=None):
@@ -65,7 +88,7 @@ class AvailabilityViewSet(ViewSet):
 
 class BriefcaseViewSet(ViewSet):
     queryset = Briefcase.objects.all()
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAssessorAuthenticated,)
     serializer_class = BriefcaseSerializer
 
     def get_object(self, request, id):
@@ -74,7 +97,8 @@ class BriefcaseViewSet(ViewSet):
 
     # list of collection related to user
     def list(self, request):
-        query_set = self.queryset
+        user = request.user
+        query_set = self.queryset.filter(assessor__user=user)
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
             briefcases = serialize.data
@@ -88,6 +112,22 @@ class BriefcaseViewSet(ViewSet):
             "briefcases": briefcases
         }
         return Response(context, status=status.HTTP_200_OK)
+
+
+    @action(detail=True, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
+    def upload_new(self, request, format=None):
+        user = request.user
+        assessor = Assessor.objects.get(user=user)
+        data = request.data
+        data['assessor'] = assessor
+        try:
+            serializer = self.serializer_class(data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
+
 
     def retrieve(self, request, pk=None):
         briefcase = self.get_object(request, pk)
@@ -113,3 +153,36 @@ class BriefcaseViewSet(ViewSet):
             "briefcases": briefcases
         }
         return Response(context, status=status.HTTP_200_OK)
+
+
+class AssessorDept(APIView):
+    permission_classes = [IsAuthenticated, ]
+    serializer_classes = AssessorSerializer
+
+    def get(self, request, code):
+        user = request.user
+        dept_code = str(code)
+
+        assessors = Assessor.objects.filter(
+            department=code
+        )
+
+        serialize = self.serializer_classes(assessors, many=True)
+
+        return  Response(data=serialize.data, status=status.HTTP_200_OK)
+
+
+class AssessorProfile(APIView):
+    permission_classes = [IsAuthenticated,]
+    serializer_classes = AssessorSerializer
+
+    def get (self, request):
+        user = request.user
+        try:
+            assessor = Assessor.objects.get(user=user)
+            serialize = self.serializer_classes(assessor)
+
+            return  Response(data=serialize.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)

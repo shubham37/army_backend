@@ -64,10 +64,20 @@ class Assessor(models.Model):
         return str(self.first_name)
 
     
+class Status:
+    AVAILABLE=1
+    NOT_AVAILABLE=2
+
+STATUS_CHOICES = [
+    (Status.AVAILABLE, 'Available'),
+    (Status.NOT_AVAILABLE, 'Not Available')
+]
+
 class Availability(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
     start_time = models.DateTimeField(verbose_name='Start Time')
     end_time = models.DateTimeField(verbose_name='End Time')
+    status = models.IntegerField(choices=STATUS_CHOICES, default=Status.AVAILABLE)
 
     def str(self):
         return str(self.assessor)
@@ -75,8 +85,11 @@ class Availability(models.Model):
 
 class Briefcase(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
-    document_url = models.URLField(verbose_name='document')
-    document_name = models.CharField(max_length=48)
+    file_url = models.URLField(verbose_name='document', null=True, blank=True)
+    file_name = models.CharField(max_length=128)
+    file_type = models.CharField(max_length=48)
+    fize_size = models.CharField(max_length=256)
 
     def str(self):
-        return str(self.assessor)
+        return str(self.file_name)
+

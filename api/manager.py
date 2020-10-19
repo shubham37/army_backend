@@ -1,6 +1,12 @@
 from django.contrib.auth.models import BaseUserManager
 
 
+class Role:
+    STUDENT = 0
+    ASSESSOR = 1
+    ADMIN = 2
+
+
 class UserManager(BaseUserManager):
 
     def create_user(self, email, username, password=None):
@@ -31,6 +37,6 @@ class UserManager(BaseUserManager):
             username=username,
         )
         user.is_staff = True
-        user.is_superuser = True
+        user.role = Role.ADMIN
         user.save(using=self._db)
         return user

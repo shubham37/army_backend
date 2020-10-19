@@ -1,12 +1,10 @@
-# accounts.admin.py
-
 from django.contrib import admin
 from api.models import User
 
 
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('email', 'username','is_active','date_joined')
-    list_filter = ('is_student','is_staff','is_superuser')
+    list_display = ('email', 'username','is_active','date_joined', 'role')
+    list_filter = ('role',)
     ordering =('-date_joined',)
 
 

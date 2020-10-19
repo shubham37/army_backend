@@ -1,5 +1,6 @@
 from rest_framework import  serializers
-from student.models import State, City, Pincode, PostOffice, Address, TestSchedule, Test
+from student.models import Student, State, City, Pincode, PostOffice, \
+    Address, StreamSchedule, Test, PsychTestQuestion
 
 
 class StateSerializer(serializers.ModelSerializer):
@@ -29,11 +30,27 @@ class PostofficeSerializer(serializers.ModelSerializer):
         depth = 3
 
 
-class TestScheduleSerializer(serializers.ModelSerializer):
+class StreamScheduleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TestSchedule
+        model = StreamSchedule
         fields ='__all__'
         depth = 1
 
 
+class TestStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = '__all__'
+        depth = 1
 
+
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Student
+        fields = ['first_name','middle_name','last_name']
+
+
+class PsychTestQustionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = PsychTestQuestion
+        fields = '__all__'
