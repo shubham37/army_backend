@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
 from api.models import User
-from student.models import Student, Address
+from student.models import Student, Address, PostOffice
 from api.permissions import IsStudentAuthenticated
 
 
@@ -23,8 +23,6 @@ class Signup(APIView):
         """
         try:
             validated_data =  request.data
-            import ipdb ; ipdb.set_trace()
-
             # Creation Code Here
 
             # 1. User Create
@@ -35,16 +33,16 @@ class Signup(APIView):
             )
 
             user, _ = User.objects.get_or_create(**user)
-            user.is_student = True
+            user.role = 0
             user.save()
 
             # 2. Address Create
             address = dict(
-                flat=validated_data.get('flat'),
+                flat_block=validated_data.get('flat'),
                 street=validated_data.get('street'),
                 area=validated_data.get('area'),
                 phone=validated_data.get('phone'),
-                postoffice=validated_data.get('postoffice')
+                post_office=PostOffice.objects.get(id=int(validated_data.get('postoffice')))
             )
 
             address, _ = Address.objects.get_or_create(**address)
@@ -52,17 +50,17 @@ class Signup(APIView):
             # 3. Student Create
             student = dict(
                     user = user,
-                    first_name = validated_data.get('first_name'),
-                    middle_name = validated_data.get('middle_name'),
-                    last_name = validated_data.get('last_name'),
+                    first_name = validated_data.get('firstname'),
+                    middle_name = validated_data.get('middlename'),
+                    last_name = validated_data.get('lastname'),
                     gender = validated_data.get('gender'),
                     dob = validated_data.get('dob'),
                     occupation = validated_data.get('occupation'),
-                    marital_status = validated_data.get('marital_status'),
+                    marital_status = validated_data.get('marital'),
                     mobile = validated_data.get('mobile'),
                     address = address,
-                    security_question = validated_data.get('security_question'),
-                    security_answer = validated_data.get('security_answer'),
+                    security_question = validated_data.get('squestion'),
+                    security_answer = validated_data.get('sanswer'),
                     plan = validated_data.get('plan', 1)
             )
 
@@ -73,12 +71,12 @@ class Signup(APIView):
             
             response = {
                 "token":token.key,
-                "role":2,
+                "role":0,
                 "user_id":token.user_id
             }
             return Response(data=response, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class Login(APIView):
@@ -91,10 +89,12 @@ class Login(APIView):
         """
         try:
             data = request.data
+            
 
             username =str(data.get('username'))
             password =str(data.get('password'))
             # import ipdb ; ipdb.set_trace()
+
             if not User.objects.filter((
                 Q(email=username) | Q(username=username)
                 )).exists():
@@ -114,8 +114,10 @@ class Login(APIView):
                         'user_id': str(token.user_id)
                     }
                 return Response(data=response, status=status.HTTP_200_OK)
-        except Exception as e:
+        except ValueError as e:
             return Response(data={'error':e}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ForgotPassword(APIView):
@@ -140,7 +142,7 @@ class ForgotPassword(APIView):
             else:
                 return Response(data={'details':"There is no email."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ResetPassword(APIView):
@@ -218,4 +220,4 @@ class SendOTP(APIView):
             else:
                 return Response(data={'details':"There is no email."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)    
+            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
