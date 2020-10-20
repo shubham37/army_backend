@@ -7,7 +7,7 @@ from assessor.views import AvailabilityViewSet, BriefcaseViewSet, \
 router = DefaultRouter()
 
 urlpatterns = [
-    url(r'^dept/', AssessorDept.as_view(), name='dept_assessor_list'),
+    url(r'^dept/(?P<dep>\D+)/', AssessorDept.as_view(), name='dept_assessor_list'),
     url(r'^profile/', AssessorProfile, name='assessor_profile')
 ]
 

@@ -11,7 +11,7 @@ router = DefaultRouter()
 urlpatterns = [
     url(r'^profile/', StudentProfile.as_view(), name='student_profle'),
     url(r'^tests/', PsychTest.as_view(), name='psych_tests'),
-    url(r'^test_question/', PsychQuestion.as_view(), name='test_question')
+    url(r'^test_question/(?P<code>\D+)/', PsychQuestion.as_view(), name='test_question')
 ]
 
 

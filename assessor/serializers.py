@@ -6,7 +6,6 @@ class AvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Availability
         fields ='__all__'
-        depth = 1
 
 
 class BriefcaseSerializer(serializers.ModelSerializer):
@@ -20,4 +19,3 @@ class AssessorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assessor
         fields ='__all__'
-        

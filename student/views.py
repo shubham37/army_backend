@@ -155,9 +155,9 @@ class StreamScheduleViewSet(ViewSet):
         return StreamSchedule
 
     # list of collection related to user
-    @action(detail=True,methods=['GET'])
-    def student_list(self, request, pk=None):
-        query_set = self.queryset.filter(student_id=pk)
+    @action(detail=False, methods=['GET'])
+    def student_list(self, request):
+        query_set = self.queryset.filter(student__user=request.user)
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
             StreamSchedules = serialize.data
@@ -250,7 +250,7 @@ class Test(ViewSet):
 
 
 class StudentProfile(APIView):
-    permission_classes = [IsStudentAuthenticated, ]
+    permission_classes = (IsStudentAuthenticated, )
     serializer_class = StudentSerializer
 
     def get(self, request):
@@ -266,9 +266,9 @@ class StudentProfile(APIView):
 class PsychTest(APIView):
     permission_classes = [IsStudentAuthenticated, ]
 
-    def post(self, request, code):
+    def post(self, request):
         test_ans = request.data
-        test_code = code
+        test_code = test_ans.get('code',None)
 
         try:
             student = Student.objects.get(user=request.user)
@@ -276,10 +276,12 @@ class PsychTest(APIView):
             return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
-            test_submission = PsychTestSubmission.objects.create(
-                code=test_code, student=student, answer=test_ans
-            )
-            return Response(data={'detail':"Test Submitted Successfully."}, status=status.HTTP_200_OK)
+            if test_code is not None:
+                test_submission = PsychTestSubmission.objects.create(
+                    code=test_code, student=student, answer=test_ans.get('answer', '')
+                )
+                return Response(data={'detail':"Test Submitted Successfully."}, status=status.HTTP_200_OK)
+            return Response(data={'detail':"Please Try Again Later."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_406_NOT_ACCEPTABLE)
 

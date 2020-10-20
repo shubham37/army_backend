@@ -12,6 +12,8 @@ from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer, \
     AssessorSerializer
 from api.permissions import IsAssessorAuthenticated
 
+from student.models import StreamSchedule
+from student.serializers import StreamScheduleSerializer
 
 class AvailabilityViewSet(ViewSet):
     queryset = Availability.objects.all()
@@ -70,18 +72,23 @@ class AvailabilityViewSet(ViewSet):
     # list of collection related to user
     @action(detail=True,methods=['GET'])
     def assessor_list(self, request, pk=None):
-        query_set = self.queryset.filter(assessor_id=pk)
+        query_set = self.queryset.filter(assessor_id=pk, status=1)
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
             availabilities = serialize.data
-            is_success = True
         else:
-            availabilities = None
-            is_success = False
+            availabilities = []
+
+        streams = StreamSchedule.objects.filter(assessor_id=pk)
+        if streams.exists():
+            serialize = StreamScheduleSerializer(streams, many=True)
+            not_availabilities = serialize.data
+        else:
+            not_availabilities = []
 
         context = {
-            "is_success": is_success,
-            "availabilities": availabilities
+            "availabilities": availabilities,
+            "not_availabilities": not_availabilities
         }
         return Response(context, status=status.HTTP_200_OK)
 
@@ -159,17 +166,26 @@ class AssessorDept(APIView):
     permission_classes = [IsAuthenticated, ]
     serializer_classes = AssessorSerializer
 
-    def get(self, request, code):
+    def get(self, request, dep):
         user = request.user
-        dept_code = str(code)
+        dept_code = str(dep)
+        response = {}
 
         assessors = Assessor.objects.filter(
-            department=code
+            department=dept_code
         )
-
-        serialize = self.serializer_classes(assessors, many=True)
-
-        return  Response(data=serialize.data, status=status.HTTP_200_OK)
+        if assessors.exists():
+            serialize = self.serializer_classes(assessors, many=True)
+            response.update({
+                'is_exist':True,
+                'assessors': serialize.data
+            })
+        else:
+            response.update({
+                'is_exist':False,
+                'assessors': []
+            })
+        return  Response(data=response, status=status.HTTP_200_OK)
 
 
 class AssessorProfile(APIView):
