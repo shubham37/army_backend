@@ -26,20 +26,26 @@ class AvailabilityViewSet(ViewSet):
 
     # list of collection related to user
     def list(self, request):
-        query_set = self.queryset
+        query_set = self.queryset.filter(assessor__user=request.user, status=1)
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
-            availability = serialize.data
-            is_success = True
+            availabilities = serialize.data
         else:
-            availability = None
-            is_success = False
+            availabilities = []
+
+        streams = StreamSchedule.objects.filter(assessor__user=request.user)
+        if streams.exists():
+            serialize = StreamScheduleSerializer(streams, many=True)
+            not_availabilities = serialize.data
+        else:
+            not_availabilities = []
 
         context = {
-            "is_success": is_success,
-            "availability": availability
+            "availabilities": availabilities,
+            "not_availabilities": not_availabilities
         }
         return Response(context, status=status.HTTP_200_OK)
+
 
     def retrieve(self, request, pk=None):
         availability = self.get_object(request, pk)
@@ -122,11 +128,12 @@ class BriefcaseViewSet(ViewSet):
 
 
     @action(detail=True, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
-    def upload_new(self, request, format=None):
+    def uploadfile(self, request):
         user = request.user
         assessor = Assessor.objects.get(user=user)
-        data = request.data
-        data['assessor'] = assessor
+        import ipdb ; ipdb.set_trace()
+        # data = request.data
+        # data['assessor'] = assessor
         try:
             serializer = self.serializer_class(data)
             if serializer.is_valid(raise_exception=True):
@@ -134,7 +141,6 @@ class BriefcaseViewSet(ViewSet):
                 return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
-
 
     def retrieve(self, request, pk=None):
         briefcase = self.get_object(request, pk)

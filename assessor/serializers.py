@@ -12,7 +12,6 @@ class BriefcaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Briefcase
         fields ='__all__'
-        depth = 1
 
 
 class AssessorSerializer(serializers.ModelSerializer):
