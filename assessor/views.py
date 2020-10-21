@@ -1,3 +1,4 @@
+import datetime
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
@@ -54,6 +55,7 @@ class AvailabilityViewSet(ViewSet):
             return Response(serialized.data, status=status.HTTP_200_OK)
         return Response("No Data", status=status.HTTP_404_NOT_FOUND)
 
+    # Call from Assessor on Training Schedule Tab to Add New or Update older one
     @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
     def add_availability(self, request):
         schedules = request.data.get('schedules')
@@ -68,16 +70,16 @@ class AvailabilityViewSet(ViewSet):
                 if availability.exists():
                     availability.update(
                         status = schedule.get('status',1),
-                        start_time = schedule.get('StartTime'),
-                        end_time = schedule.get('EndTime')
+                        start_time = datetime.datetime.strptime(schedule.get('StartTime'), '%Y-%m-%dT%H:%M:%S.%fz'),
+                        end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz'))
                     )
                 else:
                     data_for_create.append(
                         Availability(
                             assessor=assessor,
                             status = schedule.get('status'),
-                            start_time = schedule.get('StartTime'),
-                            end_time = schedule.get('EndTime')
+                            start_time = datetime.datetime.strptime(schedule.get('StartTime'), '%Y-%m-%dT%H:%M:%S.%fz'),
+                            end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz'))
                         )
                     )
             if data_for_create:
@@ -90,14 +92,18 @@ class AvailabilityViewSet(ViewSet):
         except Exception as e:
             return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
 
-
+    # Call from Assessor on Training Schedule Tab to Delete one
     @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
     def delete_availabilities(self, request):
         schedules = request.data.get('schedules_ids')
         user = request.user
         try:
             assessor = Assessor.objects.get(user=user)
-            availabilities = Availability.objects.filter(assessor=assessor)
+            availabilities = Availability.objects.filter(assessor=assessor, id__in=schedules)
+            if availabilities.exists():
+                availabilities.delete()
+                return Response(data={"detail":"Record Deleted Successfully."}, status=status.HTTP_200_OK)
+            
             import ipdb; ipdb.set_trace()
             # for schedule in schedules:
             #     import ipdb ; ipdb.set_trace()
