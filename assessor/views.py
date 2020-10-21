@@ -54,26 +54,65 @@ class AvailabilityViewSet(ViewSet):
             return Response(serialized.data, status=status.HTTP_200_OK)
         return Response("No Data", status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=True, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
+    @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
     def add_availability(self, request):
         schedules = request.data.get('schedules')
         user = request.user
         try:
             assessor = Assessor.objects.get(user=user)
             availabilities = Availability.objects.filter(assessor=assessor)
+            data_for_create = []
             for schedule in schedules:
-                import ipdb ; ipdb.set_trace()
-                schedule['student'] = student
-                schedule['assessor'] = assessor
-                serialize = self.serializer_class(schedule)
+                print(schedule.get('Id'))
+                availability = availabilities.filter(id=schedule.get('Id'))
+                if availability.exists():
+                    availability.update(
+                        status = schedule.get('status',1),
+                        start_time = schedule.get('StartTime'),
+                        end_time = schedule.get('EndTime')
+                    )
+                else:
+                    data_for_create.append(
+                        Availability(
+                            assessor=assessor,
+                            status = schedule.get('status'),
+                            start_time = schedule.get('StartTime'),
+                            end_time = schedule.get('EndTime')
+                        )
+                    )
+            if data_for_create:
                 try:
-                    if serialize.is_valid():
-                        serialize.save()
+                    Availability.objects.bulk_create(data_for_create)
+                    return Response(data={"detail":"Data Created and Updated Successfully."}, status=status.HTTP_201_CREATED)
                 except Exception as e:
-                    print(e)
-            return Response(data={"detail":"Data Update Successfully."}, status=status.HTTP_205_RESET_CONTENT)
+                    return Response(data={"error":"Updated but not created"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(data={"detail":"Data Updated Successfully."}, status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
+
+
+    @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
+    def delete_availabilities(self, request):
+        schedules = request.data.get('schedules_ids')
+        user = request.user
+        try:
+            assessor = Assessor.objects.get(user=user)
+            availabilities = Availability.objects.filter(assessor=assessor)
+            import ipdb; ipdb.set_trace()
+            # for schedule in schedules:
+            #     import ipdb ; ipdb.set_trace()
+            #     schedule['student'] = student
+            #     schedule['assessor'] = assessor
+            #     serialize = self.serializer_class(schedule)
+            #     try:
+            #         if serialize.is_valid():
+            #             serialize.save()
+            #     except Exception as e:
+            #         print(e)
+            # return Response(data={"detail":"Data Update Successfully."}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
+
 
     # list of collection related to user
     @action(detail=True,methods=['GET'])
@@ -195,10 +234,12 @@ class AssessorDept(APIView):
 
 
 class AssessorProfile(APIView):
-    permission_classes = [IsAuthenticated,]
+    permission_classes = (IsAuthenticated,)
     serializer_classes = AssessorSerializer
 
-    def get (self, request):
+    def get(self, request):
+        # import ipdb; ipdb.set_trace()
+
         user = request.user
         try:
             assessor = Assessor.objects.get(user=user)

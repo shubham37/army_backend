@@ -8,7 +8,7 @@ router = DefaultRouter()
 
 urlpatterns = [
     url(r'^dept/(?P<dep>\D+)/', AssessorDept.as_view(), name='dept_assessor_list'),
-    url(r'^profile/', AssessorProfile, name='assessor_profile')
+    url(r'^profile/', AssessorProfile.as_view(), name='assessor_profile')
 ]
 
 
