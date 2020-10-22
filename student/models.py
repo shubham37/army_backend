@@ -1,6 +1,6 @@
 from django.db import models
 from api.models import User
-from assessor.models  import Assessor
+from assessor.models  import Assessor, Department
 
 
 class State(models.Model):
@@ -152,39 +152,61 @@ STATUS_CHOICES = [
     (Status.DONE, 'Done'),
 ]
 
+class TestImages(models.Model):
+    image = models.URLField(verbose_name='question image')
+
+    def __str__(self):
+        return str(self.image)
+
+
+class TestQuestion(models.Model):
+    word = models.CharField(max_length=20, blank=True, null=True)
+    text = models.CharField(max_length=120, blank=True, null=True)
+    images = models.ManyToManyField(TestImages, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if (self.word and self.text) or (self.images and self.text) or (self.word and self.images):
+            raise  ValueError("Set Only One Thing For Test Question")
+        else:
+            super().save(*args,**kwargs)
+
+    def __str__(self):
+        if self.word:
+            return str(self.word)
+        if self.text:
+            return str(self.text)
+        if self.images:
+            return str('images')
+
 
 class Test(models.Model):
     identifier = models.CharField(verbose_name='Test', max_length=10)
-    student = models.ForeignKey(Student, on_delete=models.ForeignKey, null=True, blank=True)
-    assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
-    remark = models.CharField(verbose_name='Remarks', max_length=96)
-    comment = models.CharField(verbose_name='Comment', max_length=96)
-    status = models.IntegerField(choices=STATUS_CHOICES, default=Status.DONE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.identifier)
 
 
-class PsychTestQuestion(models.Model):
-    code = models.CharField(verbose_name='Psych Test Code', max_length=10)
-    # image = 
-    qusetion = models.CharField(verbose_name='Psych Test Code', max_length=128, null=True, blank=True)
-
-    def __str__(self):
-        return self.code
-
-
-class PsychTestSubmission(models.Model):
-    code = models.CharField(verbose_name='Psych Test Code', max_length=10)
+class TestSubmission(models.Model):
+    test = models.ForeignKey(Test, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     answer = models.TextField(verbose_name='Test Answer')
+    submission_status = models.IntegerField(choices=STATUS_CHOICES, default=Status.PENDING)
+    remark = models.CharField(verbose_name='Remarks', max_length=96, null=True, blank=True)
+    comment = models.TextField(verbose_name='Comment',null=True, blank=True)
+    assessor = models.ForeignKey(Assessor, on_delete=models.CASCADE, null=True, blank=True)
+    checking_status = models.IntegerField(choices=STATUS_CHOICES, default=Status.PENDING)
+    submission_date = models.DateField(verbose_name='date joined', auto_now_add=True)
 
     def __str__(self):
-        return self.code
+        return str(self.test) + "--" + str(self.student)
 
 
 class ProgressReport(models.Model):
-    assessor = models.ForeignKey(Assessor,  on_delete=models.CASCADE)
+    assessor = models.ForeignKey(Assessor, on_delete=models.CASCADE)
     student = models.ForeignKey(Student,  on_delete=models.CASCADE)
     report = models.TextField(verbose_name='report')
+    reporting_date = models.DateField(verbose_name='date joined', auto_now_add=True)
+
 

@@ -1,3 +1,4 @@
+import datetime
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
@@ -7,12 +8,13 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import action
 
-from assessor.models import Assessor
+from assessor.models import Assessor, Availability
 from student.models import State, City, Pincode, PostOffice, StreamSchedule, \
     Test, Student, PsychTestSubmission,PsychTestQuestion
 from student.serializers import  StateSerializer, CitySerializer, \
     PincodeSerializer, PostofficeSerializer, StreamScheduleSerializer, \
-        TestStatusSerializer, StudentSerializer, PsychTestQustionSerializer
+        TestStatusSerializer, TestReportSerializer, StudentSerializer, \
+            PsychTestQustionSerializer
 from api.permissions import  IsStudentAuthenticated
 
 
@@ -154,83 +156,60 @@ class StreamScheduleViewSet(ViewSet):
         StreamSchedule = self.queryset.filter(id=id)
         return StreamSchedule
 
-    # list of collection related to user
-    @action(detail=False, methods=['GET'])
-    def student_list(self, request):
+    # Call from Student on Training Schedule Tab to list of streamSchedules
+    def list(self, request):
         query_set = self.queryset.filter(student__user=request.user)
+        StreamSchedules = []
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
             StreamSchedules = serialize.data
-            is_success = True
-        else:
-            StreamSchedules = None
-            is_success = False
-
         context = {
-            "is_success": is_success,
             "StreamSchedules": StreamSchedules
         }
-        return Response(context, status=status.HTTP_200_OK)
+        return Response(data=context, status=status.HTTP_200_OK)
 
-    @action(detail=True,methods=['GET'])
-    def assessor_list(self, request, pk=None):
-        query_set = self.queryset.filter(assessor_id=pk)
+    # Call from Student on Schedule for Today Tab to list of today streamSchedules
+    @action(detail=False, methods=['GET'], permission_classes=[IsStudentAuthenticated,])
+    def today(self, request):
+        today = datetime.datetime.today()
+        query_set = self.queryset.filter(student__user=request.user, start_time__date=today)
+        StreamSchedules = []
         if query_set.exists():
             serialize = self.serializer_class(query_set, many=True)
             StreamSchedules = serialize.data
-            is_success = True
-        else:
-            StreamSchedules = None
-            is_success = False
-
         context = {
-            "is_success": is_success,
             "StreamSchedules": StreamSchedules
         }
-        return Response(context, status=status.HTTP_200_OK)
+        return Response(data=context, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['POST'], permission_classes=[IsStudentAuthenticated,])
+    # Call from Student on Dept wise Assessor Tab to add list of streamSchedules
+    @action(detail=False, methods=['POST'], permission_classes=[IsStudentAuthenticated,])
     def add_test_schedule(self, request):
+        # import ipdb; ipdb.set_trace()
         schedules = request.data.get('schedules')
         assessor = request.data.get('assessor')
         user = request.user
         try:
             assessor = Assessor.objects.get(id = assessor)
             student = Student.objects.get(user=user)
-
-            StreamSchedule.objects.filter(assessor=assessor, student=student).delete()
+            ss_for_create = []
             for schedule in schedules:
-                schedule['student'] = student
-                schedule['assessor'] = assessor
-                serialize = self.serializer_class(schedule)
-                try:
-                    if serialize.is_valid():
-                        serialize.save()
-                except Exception as e:
-                    print(e)
-            return Response(data={"detail":"Data Update Successfully."}, status=status.HTTP_205_RESET_CONTENT)
+                av = Availability.objects.filter(id= schedule.get('Id'), status=1)
+                if av.exists():
+                    ss = StreamSchedule(
+                        student = student,
+                        assessor = assessor,
+                        start_time = av.last().start_time,
+                        end_time = av.last().end_time,
+                        subject= schedule.get('Subject')
+                    )
+                    av.delete()
+                    ss_for_create.append(ss)
+            if ss_for_create:
+                StreamSchedule.objects.bulk_create(ss_for_create)
+            return Response(data={"detail":"Session Scheduled for Available Time Slot Successfully."}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
-
-    @action(detail=False, methods=['GET'], permission_classes=[IsStudentAuthenticated, ])
-    def student_schedule(self, request):
-        user = request.user
-        try:
-            student = Student.objects.get(user=user)
-        except Exception as e:
-            return Response(data={"detail":e}, status=status.HTTP_401_UNAUTHORIZED)
-
-        schedules = self.queryset.filter(student=student)
-        serialized_schedule = self.serializer_class(schedules, manny=True)
-
-        return Response(data=serialized_schedule.data, status=status.HTTP_200_OK)
-
-    def retrieve(self, request, pk=None):
-        StreamSchedule = self.get_object(request, pk)
-        if StreamSchedule.exists():
-            serialized = StreamScheduleSerializer(StreamSchedule, many=True)
-            return Response(serialized.data, status=status.HTTP_200_OK)
-        return Response("No Data.", status=status.HTTP_404_NOT_FOUND)
+            return Response(data={"error":e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class Test(ViewSet):
@@ -238,15 +217,25 @@ class Test(ViewSet):
     permission_classes = (IsStudentAuthenticated,)
     serializer_class = TestStatusSerializer
 
-    @action(detail=False, methods=['POST'])
-    def test_status(self, request):
-        serialize = self.serializer_class(self.queryset, many=True)
-        return Response(data={'status':serialize.data}, status=status.HTTP_200_OK)
+    # Call from Student on Test Status Tab to see tests status of him self 
+    def list(self, request):
+        tests = self.queryset.filter(student__user = request.user)
+        if tests:
+            serialize = self.serializer_class(tests, many=True)
+            return Response(data={'status':serialize.data}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
+    # Call from Student on Test Report Tab to see tests report dept wise 
     @action(detail=False, methods=['POST'])
     def test_reports(self, request):
-        serialize = self.serializer_class(self.queryset, many=True)
-        return Response(data={'reports':serialize.data}, status=status.HTTP_200_OK)
+        dept_code = request.data.get('code')
+        tests = self.queryset.filter(student__user = request.user, assessor__department= dept_code)
+        if tests:
+            serialize = TestReportSerializer(tests, many=True)
+            return Response(data={'reports':serialize.data}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
 
 class StudentProfile(APIView):
@@ -266,6 +255,7 @@ class StudentProfile(APIView):
 class PsychTest(APIView):
     permission_classes = [IsStudentAuthenticated, ]
 
+    # Call from Student On PSYCH Test Complete to Submit Anwer Against PSYCH Test
     def post(self, request):
         test_ans = request.data
         test_code = test_ans.get('code',None)

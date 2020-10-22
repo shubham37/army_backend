@@ -4,7 +4,7 @@ from api.views import Signup, Login,  ForgotPassword, ResetPassword
 from rest_framework.routers import DefaultRouter
 from student.views import StateViewSet, CityViewSet,  PincodeViewSet,  \
     PostofficeViewSet, StreamScheduleViewSet, StudentProfile, PsychTest, \
-        PsychQuestion
+        PsychQuestion, Test
 
 router = DefaultRouter()
 
@@ -14,7 +14,7 @@ urlpatterns = [
     url(r'^test_question/(?P<code>\D+)/', PsychQuestion.as_view(), name='test_question')
 ]
 
-
+router.register(r'dept_test', Test)
 router.register(r'state', StateViewSet)
 router.register(r'city', CityViewSet)
 router.register(r'pincode', PincodeViewSet)

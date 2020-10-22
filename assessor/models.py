@@ -2,30 +2,11 @@ from django.db import models
 from api.models  import User
 
 
-class Department:
-    GTO='GTO'
-    IO='IO'
-    PSYCH='PSYCH'
-    PD='PD'
-    IT='IT'
-
-
 class Gender:
     MALE=1
     FEMALE=2
     OTHER=3
 
-class Position:
-    HOD=1
-    COLONEL=2
-    BRIG=3
-
-
-POSITION_CHOICES = [
-    (Position.HOD, 'HOD'),
-    (Position.COLONEL, 'COLONEL'),
-    (Position.BRIG, 'BRIG')
-]
 
 GENDER_CHOICES = [
     (Gender.MALE, 'Male'),
@@ -33,13 +14,26 @@ GENDER_CHOICES = [
     (Gender.OTHER, 'Other')
 ]
 
-DEPARTMENT_CHOICES = [
-    (Department.GTO, 'GTO Department'),
-    (Department.IO, 'IO Department'),
-    (Department.PSYCH, 'PSYCH Department'),
-    (Department.PD, 'PD Department'),
-    (Department.IT, 'Intt Test Department')
-]
+
+class Department(models.Model):
+    name = models.CharField(verbose_name='Department Name', max_length=64)
+    code = models.CharField(verbose_name='Department Code', max_length=10)
+
+    def save(self, *args, **kwargs):
+        if len(self.code.split(' ')<=1:
+            super().save(*args,**kwargs)
+        else:
+            raise  ValueError("Code Not allowed spaces.")
+
+    def __str__(self):
+        return str(self.name)
+
+
+class Position(models.Model):
+    designation = models.CharField(verbose_name='Department Name', max_length=64)
+
+    def __str__(self):
+        return str(self.name)
 
 
 class Assessor(models.Model):
@@ -48,8 +42,8 @@ class Assessor(models.Model):
     middle_name = models.CharField(max_length=64, null=True, blank=True)
     last_name = models.CharField(max_length=64, null=True, blank=True)
     gender = models.IntegerField(choices=GENDER_CHOICES, default=Gender.MALE)
-    department = models.CharField(max_length=5, choices=DEPARTMENT_CHOICES, default=Department.PSYCH)
-    position = models.IntegerField(choices=POSITION_CHOICES, default=Position.HOD)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if self.user and self.user.is_staff:
@@ -83,12 +77,24 @@ class Availability(models.Model):
         return str(self.assessor)
 
 
+class FileType:
+    VIDEO=1
+    DOCUMENT=2
+    IMAGE=3
+
+FILETYPE_CHOICES = [
+    (FileType.VIDEO, 'Video'),
+    (FileType.DOCUMENT, 'Document'),
+    (FileType.IMAGE, 'Image')
+]
+
+
 class Briefcase(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
     file_url = models.URLField(verbose_name='document', null=True, blank=True)
     file_name = models.CharField(max_length=128)
-    file_type = models.CharField(max_length=48)
-    fize_size = models.CharField(max_length=256)
+    file_size = models.CharField(max_length=48, default='1')
+    file_type = models.IntegerField(choices=FILETYPE_CHOICES, default=FileType.DOCUMENT)
 
     def str(self):
         return str(self.file_name)

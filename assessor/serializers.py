@@ -9,6 +9,8 @@ class AvailabilitySerializer(serializers.ModelSerializer):
 
 
 class BriefcaseSerializer(serializers.ModelSerializer):
+    def validate(self, attr):
+        import ipdb; ipdb.set_trace()
     class Meta:
         model = Briefcase
         fields ='__all__'

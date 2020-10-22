@@ -25,7 +25,7 @@ class AvailabilityViewSet(ViewSet):
         availability = self.queryset.filter(id=id)
         return availability
 
-    # list of collection related to user
+    # Call from Assessor on Training Schedule Tab to list of availabilities and streamSchedules
     def list(self, request):
         query_set = self.queryset.filter(assessor__user=request.user, status=1)
         if query_set.exists():
@@ -47,14 +47,6 @@ class AvailabilityViewSet(ViewSet):
         }
         return Response(context, status=status.HTTP_200_OK)
 
-
-    def retrieve(self, request, pk=None):
-        availability = self.get_object(request, pk)
-        if availability.exists():
-            serialized = AvailabilitySerializer(availability, many=True)
-            return Response(serialized.data, status=status.HTTP_200_OK)
-        return Response("No Data", status=status.HTTP_404_NOT_FOUND)
-
     # Call from Assessor on Training Schedule Tab to Add New or Update older one
     @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated,])
     def add_availability(self, request):
@@ -71,15 +63,15 @@ class AvailabilityViewSet(ViewSet):
                     availability.update(
                         status = schedule.get('status',1),
                         start_time = datetime.datetime.strptime(schedule.get('StartTime'), '%Y-%m-%dT%H:%M:%S.%fz'),
-                        end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz'))
+                        end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz')
                     )
                 else:
                     data_for_create.append(
                         Availability(
                             assessor=assessor,
-                            status = schedule.get('status'),
+                            status = schedule.get('status',1),
                             start_time = datetime.datetime.strptime(schedule.get('StartTime'), '%Y-%m-%dT%H:%M:%S.%fz'),
-                            end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz'))
+                            end_time = datetime.datetime.strptime(schedule.get('EndTime'), '%Y-%m-%dT%H:%M:%S.%fz')
                         )
                     )
             if data_for_create:
@@ -102,35 +94,23 @@ class AvailabilityViewSet(ViewSet):
             availabilities = Availability.objects.filter(assessor=assessor, id__in=schedules)
             if availabilities.exists():
                 availabilities.delete()
-                return Response(data={"detail":"Record Deleted Successfully."}, status=status.HTTP_200_OK)
-            
-            import ipdb; ipdb.set_trace()
-            # for schedule in schedules:
-            #     import ipdb ; ipdb.set_trace()
-            #     schedule['student'] = student
-            #     schedule['assessor'] = assessor
-            #     serialize = self.serializer_class(schedule)
-            #     try:
-            #         if serialize.is_valid():
-            #             serialize.save()
-            #     except Exception as e:
-            #         print(e)
-            # return Response(data={"detail":"Data Update Successfully."}, status=status.HTTP_205_RESET_CONTENT)
+                return Response(data={"detail":"Record Deleted Successfully."}, status=status.HTTP_200_OK)            
+            return Response(data={"detail":"Record is not Exist."}, status=status.HTTP_200_OK)            
         except Exception as e:
-            return Response(data={"error":e}, status=status.HTTP_304_NOT_MODIFIED)
+            return Response(data={"error":e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # Call from Assessor on Schedule For Today Tab to list of today availabilities and streamSchedules
+    @action(detail=False, methods=['GET'], permission_classes=[IsAssessorAuthenticated,])
+    def today(self, request):
+        today = datetime.datetime.today()
+        # query_set = self.queryset.filter(assessor__user=request.user, status=1, start_time__date=today)
+        # if query_set.exists():
+        #     serialize = self.serializer_class(query_set, many=True)
+        #     availabilities = serialize.data
+        # else:
+        #     availabilities = []
 
-    # list of collection related to user
-    @action(detail=True,methods=['GET'])
-    def assessor_list(self, request, pk=None):
-        query_set = self.queryset.filter(assessor_id=pk, status=1)
-        if query_set.exists():
-            serialize = self.serializer_class(query_set, many=True)
-            availabilities = serialize.data
-        else:
-            availabilities = []
-
-        streams = StreamSchedule.objects.filter(assessor_id=pk)
+        streams = StreamSchedule.objects.filter(assessor__user=request.user, start_time__date=today)
         if streams.exists():
             serialize = StreamScheduleSerializer(streams, many=True)
             not_availabilities = serialize.data
@@ -138,10 +118,23 @@ class AvailabilityViewSet(ViewSet):
             not_availabilities = []
 
         context = {
-            "availabilities": availabilities,
-            "not_availabilities": not_availabilities
+            # "availabilities": availabilities,
+            "schedules": not_availabilities
         }
         return Response(context, status=status.HTTP_200_OK)
+
+    # Call from Student on Dept wise Assessor Availability Tab to list of availability
+    @action(detail=False,methods=['POST'])
+    def assessor_dept_list(self, request):
+        query_set = self.queryset.filter(assessor_id=request.data.get('assessor'), status=1)
+        availabilities = []
+        if query_set.exists():
+            serialize = self.serializer_class(query_set, many=True)
+            availabilities = serialize.data
+        context = {
+            "availabilities": availabilities
+        }
+        return Response(data=context, status=status.HTTP_200_OK)
 
 
 class BriefcaseViewSet(ViewSet):
@@ -172,18 +165,22 @@ class BriefcaseViewSet(ViewSet):
         return Response(context, status=status.HTTP_200_OK)
 
 
-    @action(detail=True, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
+    @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
     def uploadfile(self, request):
         user = request.user
         assessor = Assessor.objects.get(user=user)
-        import ipdb ; ipdb.set_trace()
-        # data = request.data
-        # data['assessor'] = assessor
+        data = request.data
+        data['assessor_id'] = assessor.id
         try:
-            serializer = self.serializer_class(data)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
+            if '.mp4' in data.get('file_name') or '.avi' in  data.get('file_name'):
+                data.update({'file_type':1})
+            elif '.doc' in data.get('file_name') or '.docs' in  data.get('file_name'):
+                data.update({'file_type':2})
+            elif '.jpeg' in data.get('file_name') or '.png' in  data.get('file_name'):
+                data.update({'file_type':3})
+
+            br = Briefcase.objects.create(**data)
+            return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
 

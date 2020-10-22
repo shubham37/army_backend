@@ -40,8 +40,14 @@ class StreamScheduleSerializer(serializers.ModelSerializer):
 class TestStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Test
-        fields = '__all__'
+        fields = ['identifier','assessor','status']
         depth = 1
+
+
+class TestReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = ['identifier','remark','comment']
 
 
 class StudentSerializer(serializers.ModelSerializer):
