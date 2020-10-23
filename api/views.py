@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
-from api.models import User
+from api.models import User, Role
 from student.models import Student, Address, PostOffice
 from api.permissions import IsStudentAuthenticated
 
@@ -23,7 +23,6 @@ class Signup(APIView):
         """
         try:
             validated_data =  request.data
-            # Creation Code Here
 
             # 1. User Create
             user = dict(
@@ -33,7 +32,7 @@ class Signup(APIView):
             )
 
             user, _ = User.objects.get_or_create(**user)
-            user.role = 0
+            user.role = Role.STUDENT
             user.save()
 
             # 2. Address Create
@@ -42,7 +41,9 @@ class Signup(APIView):
                 street=validated_data.get('street'),
                 area=validated_data.get('area'),
                 phone=validated_data.get('phone'),
-                post_office=PostOffice.objects.get(id=int(validated_data.get('postoffice')))
+                post_office=PostOffice.objects.get(
+                    id=int(validated_data.get('postoffice'))
+                )
             )
 
             address, _ = Address.objects.get_or_create(**address)
@@ -71,7 +72,7 @@ class Signup(APIView):
             
             response = {
                 "token":token.key,
-                "role":0,
+                "role":Role.STUDENT,
                 "user_id":token.user_id
             }
             return Response(data=response, status=status.HTTP_201_CREATED)

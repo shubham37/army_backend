@@ -8,13 +8,14 @@ from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import action
 
-from assessor.models import Availability, Briefcase, Assessor
+from assessor.models import Availability, Briefcase, Assessor, Department, Position
 from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer, \
-    AssessorSerializer
+    AssessorSerializer, DepartmentSerializer, PositionSerializer
 from api.permissions import IsAssessorAuthenticated
 
 from student.models import StreamSchedule
 from student.serializers import StreamScheduleSerializer
+
 
 class AvailabilityViewSet(ViewSet):
     queryset = Availability.objects.all()
@@ -252,3 +253,27 @@ class AssessorProfile(APIView):
 
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class DepartmentViewSet(ViewSet):
+    queryset = Department.objects.all()
+    permission_classes = (IsAssessorAuthenticated,)
+    serializer_class = DepartmentSerializer
+
+    def list(self, request):
+        if  self.queryset.exists():
+            serialize = self.serializer_class(self.queryset, many=True)
+            return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'detail': "No Department Found."}, status=status.HTTP_200_OK)
+
+
+class PositionViewSet(ViewSet):
+    queryset = Position.objects.all()
+    permission_classes = (IsAssessorAuthenticated,)
+    serializer_class = PositionSerializer
+
+    def list(self, request):
+        if  self.queryset.exists():
+            serialize = self.serializer_class(self.queryset, many=True)
+            return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'detail': "No Position Found."}, status=status.HTTP_200_OK)

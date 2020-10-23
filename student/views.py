@@ -9,12 +9,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import action
 
 from assessor.models import Assessor, Availability
-from student.models import State, City, Pincode, PostOffice, StreamSchedule, \
-    Test, Student, PsychTestSubmission,PsychTestQuestion
-from student.serializers import  StateSerializer, CitySerializer, \
-    PincodeSerializer, PostofficeSerializer, StreamScheduleSerializer, \
-        TestStatusSerializer, TestReportSerializer, StudentSerializer, \
-            PsychTestQustionSerializer
+
+from student.models import Student, State, City, Pincode, PostOffice, \
+    Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
+        TestQuestion, Test, TestSubmission, ProgressReport
+
+from student.serializers import StudentSerializer, StateSerializer, CitySerializer, \
+    PincodeSerializer, PostofficeSerializer, AddressSerializer, SecurityQuestionSerializer, \
+        OccupationSerializer, StreamScheduleSerializer, TestImagesSerializer, \
+            TestQuestionSerializer, TestSerializer, TestSubmissionSerializer, \
+                ProgressReportSerializer
+
 from api.permissions import  IsStudentAuthenticated
 
 
@@ -147,6 +152,54 @@ class PostofficeViewSet(ViewSet):
         return Response(context, status=status.HTTP_200_OK)
 
 
+class AddressView(APIView):
+    permission_classes =[IsStudentAuthenticated, ]
+    serializer_class = AddressSerializer
+
+    def get(self, request):
+        try:
+            student = Student.objects.get(user=request.user)
+        except Exception as e:
+            return Response(data={'error':'user not found'}, status=status.HTTP_401_UNAUTHORIZED)
+        queryset = student.address
+        serialize = self.serializer_class(queryset)
+        return Response(data=serialize.data, status=status.HTTP_200_OK)
+
+
+class SecurityQuestionView(APIView):
+    permission_classes = [AllowAny, ]
+    serializer_class = SecurityQuestionSerializer
+
+    def get(self, request):
+        queryset = SecurityQuestion.objects.all()
+        serialize = self.serializer_class(queryset, many=True)
+        return Response(data=serialize.data, status=status.HTTP_200_OK)
+
+
+class OccupationView(APIView):
+    permission_classes = [AllowAny, ]
+    serializer_class = OccupationSerializer
+
+    def get(self, request):
+        queryset = Occupation.objects.all()
+        serialize = self.serializer_class(queryset, many=True)
+        return Response(data=serialize.data, status=status.HTTP_200_OK)
+
+
+class StudentProfile(APIView):
+    permission_classes = (IsStudentAuthenticated, )
+    serializer_class = StudentSerializer
+
+    def get(self, request):
+        try:
+            student = Student.objects.get(user=request.user)
+        except Exception as e:
+            return Response(data={'detail':e},status=status.HTTP_401_UNAUTHORIZED)
+
+        serialize = self.serializer_class(student)
+        return Response(data=serialize.data,status=status.HTTP_200_OK)
+
+
 class StreamScheduleViewSet(ViewSet):
     queryset = StreamSchedule.objects.all()
     permission_classes = (IsAuthenticated, )
@@ -212,10 +265,23 @@ class StreamScheduleViewSet(ViewSet):
             return Response(data={"error":e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class Test(ViewSet):
-    queryset = Test.objects.all()
+class TestView(ViewSet):
+    permission_classes = [IsAuthenticated, ]
+    serializer_class = TestSerializer
+
+    @action(detail=True, methods=['GET'])
+    def test(self, request, code=None):
+        queryset = Test.objects.filter(code=code)
+        if queryset.exists():
+            serialize = self.serializer_class(queryset)
+            return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'detail':'No Test Found.'}, status=status.HTTP_200_OK)
+
+
+class TestSubmission(ViewSet):
+    queryset = TestSubmission.objects.all()
     permission_classes = (IsStudentAuthenticated,)
-    serializer_class = TestStatusSerializer
+    serializer_class = TestSubmissionSerializer
 
     # Call from Student on Test Status Tab to see tests status of him self 
     def list(self, request):
@@ -232,31 +298,14 @@ class Test(ViewSet):
         dept_code = request.data.get('code')
         tests = self.queryset.filter(student__user = request.user, assessor__department= dept_code)
         if tests:
-            serialize = TestReportSerializer(tests, many=True)
+            serialize = self.serializer_class(tests, many=True)
             return Response(data={'reports':serialize.data}, status=status.HTTP_200_OK)
         else:
             return Response(data={'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
-
-class StudentProfile(APIView):
-    permission_classes = (IsStudentAuthenticated, )
-    serializer_class = StudentSerializer
-
-    def get(self, request):
-        try:
-            student = Student.objects.get(user=request.user)
-        except Exception as e:
-            return Response(data={'detail':e},status=status.HTTP_401_UNAUTHORIZED)
-
-        serialize = self.serializer_class(student)
-        return Response(data=serialize.data,status=status.HTTP_200_OK)
-
-
-class PsychTest(APIView):
-    permission_classes = [IsStudentAuthenticated, ]
-
     # Call from Student On PSYCH Test Complete to Submit Anwer Against PSYCH Test
-    def post(self, request):
+    @action(detail=False, methods=['POST'])
+    def test_submit(self, request):
         test_ans = request.data
         test_code = test_ans.get('code',None)
 
@@ -267,8 +316,8 @@ class PsychTest(APIView):
 
         try:
             if test_code is not None:
-                test_submission = PsychTestSubmission.objects.create(
-                    code=test_code, student=student, answer=test_ans.get('answer', '')
+                test_submission = TestSubmission.objects.create(
+                    test__code=test_code, student=student, answer=test_ans.get('answer', '')
                 )
                 return Response(data={'detail':"Test Submitted Successfully."}, status=status.HTTP_200_OK)
             return Response(data={'detail':"Please Try Again Later."}, status=status.HTTP_400_BAD_REQUEST)
@@ -276,14 +325,15 @@ class PsychTest(APIView):
             return Response(data={'error':e}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
 
-class PsychQuestion(APIView):
+class ProgressReport(ViewSet):
+    queryset = ProgressReport.objects.all()
     permission_classes = [IsAuthenticated, ]
-    serializer_class = PsychTestQustionSerializer
+    serializer_class = ProgressReportSerializer
 
     def get(self, request, code):
         try:
-            test_question = PsychTestQuestion.objects.filter(
-                code=test_code
+            test_question = ProgressReport.objects.filter(
+                assessor=test_code
             )
             serialize = self.serializer_class(test_question)
             return Response(data=serialize.data, status=status.HTTP_200_OK)

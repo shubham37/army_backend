@@ -1,12 +1,14 @@
 from rest_framework import  serializers
 from student.models import Student, State, City, Pincode, PostOffice, \
-    Address, StreamSchedule, Test, PsychTestQuestion
+    Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
+        TestQuestion, Test, TestSubmission, ProgressReport
+        
 
 
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
         model = State
-        fields = ('id','state_name')
+        fields = '__all__'
 
 
 class CitySerializer(serializers.ModelSerializer):
@@ -30,24 +32,23 @@ class PostofficeSerializer(serializers.ModelSerializer):
         depth = 3
 
 
-class StreamScheduleSerializer(serializers.ModelSerializer):
+class AddressSerializer(serializers.ModelSerializer):
     class Meta:
-        model = StreamSchedule
+        model = Address
         fields ='__all__'
         depth = 1
 
 
-class TestStatusSerializer(serializers.ModelSerializer):
+class SecurityQuestionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Test
-        fields = ['identifier','assessor','status']
-        depth = 1
+        model = SecurityQuestion
+        fields ='__all__'
 
 
-class TestReportSerializer(serializers.ModelSerializer):
+class OccupationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Test
-        fields = ['identifier','remark','comment']
+        model = Occupation
+        fields ='__all__'
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -56,7 +57,48 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = ['first_name','middle_name','last_name']
 
 
-class PsychTestQustionSerializer(serializers.ModelSerializer):
+class StreamScheduleSerializer(serializers.ModelSerializer):
     class Meta:
-        model  = PsychTestQuestion
+        model = StreamSchedule
+        fields ='__all__'
+        depth = 1
+
+
+class TestImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestImages
+        fields ='__all__'
+
+
+class TestQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestQuestion
+        fields ='__all__'
+        depth = 1
+
+
+class TestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = '__all__'
+        depth = 1
+
+
+class TestSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestSubmission
+        fields = '__all__'
+        depth = 1
+
+
+class TestReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestSubmission
+        fields = '__all__'
+        depth = 1
+
+
+class ProgressReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ProgressReport
         fields = '__all__'

@@ -1,5 +1,6 @@
 from django.conf.urls import url, include
-from api.views import Signup, Login, ForgotPassword, ResetPassword, LogOut, Plan, SendOTP
+from api.views import Signup, Login, ForgotPassword, \
+    ResetPassword, LogOut, Plan, SendOTP
 
 
 urlpatterns = [
@@ -11,4 +12,3 @@ urlpatterns = [
     url(r'^logout/', LogOut.as_view(), name='logout'),
     url(r'^send_otp/', SendOTP.as_view(), name='send_otp'),
 ]
-

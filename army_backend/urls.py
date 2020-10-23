@@ -3,7 +3,6 @@ from django.conf.urls import url, include
 
 
 urlpatterns = [
-    # url("", include('socketio_app.urls')),
     url(r'^admin/', admin.site.urls),
     url(r'^api/', include('api.urls')),
     url(r'^student_api/', include('student.urls')),

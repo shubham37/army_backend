@@ -7,7 +7,6 @@ class Gender:
     FEMALE=2
     OTHER=3
 
-
 GENDER_CHOICES = [
     (Gender.MALE, 'Male'),
     (Gender.FEMALE, 'Female'),
@@ -20,7 +19,7 @@ class Department(models.Model):
     code = models.CharField(verbose_name='Department Code', max_length=10)
 
     def save(self, *args, **kwargs):
-        if len(self.code.split(' ')<=1:
+        if len(self.code.split(' '))<=1:
             super().save(*args,**kwargs)
         else:
             raise  ValueError("Code Not allowed spaces.")
@@ -56,7 +55,6 @@ class Assessor(models.Model):
 
     def __str__(self):
         return str(self.first_name)
-
     
 class Status:
     AVAILABLE=1
@@ -98,4 +96,3 @@ class Briefcase(models.Model):
 
     def str(self):
         return str(self.file_name)
-

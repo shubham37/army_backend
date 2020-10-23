@@ -56,18 +56,6 @@ class MaritalStatus:
     MARRIED=2
 
 
-class Occupation:
-    OCCUPATION_1=1
-    OCCUPATION_2=2
-    OCCUPATION_3=3
-
-
-class SecurityQuestion:
-    SQ_1=1
-    SQ_2=2
-    SQ_3=3
-
-
 class MembershipPlan:
     NO=0
     DIAMOND=1
@@ -85,19 +73,6 @@ MEMBERSHIP_PLAN_CHOICES = [
 ]
 
 
-SECURITY_QUESTION_CHOICES = [
-    (SecurityQuestion.SQ_1, 'SQ_1'),
-    (SecurityQuestion.SQ_2, 'SQ_2'),
-    (SecurityQuestion.SQ_3, 'SQ_3')
-]
-
-
-OCCUPATION_CHOICES = [
-    (Occupation.OCCUPATION_1, 'O1'),
-    (Occupation.OCCUPATION_2, 'O2'),
-    (Occupation.OCCUPATION_3, 'O3')
-]
-
 MARITAL_STATUS_CHOICES = [
     (MaritalStatus.SINGLE, 'Single'),
     (MaritalStatus.MARRIED, 'Married')
@@ -109,6 +84,19 @@ GENDER_CHOICES = [
     (Gender.OTHER, 'Other')
 ]
 
+class SecurityQuestion(models.Model):
+    question = models.TextField(verbose_name='Security Question')
+
+    def __str__(self):
+        return self.question
+
+class Occupation(models.Model):
+    occupation = models.CharField(verbose_name='Occupation', max_length=20)
+
+    def __str__(self):
+        return self.occupation
+
+
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=64)
@@ -116,11 +104,11 @@ class Student(models.Model):
     last_name = models.CharField(max_length=64, null=True, blank=True)
     gender = models.IntegerField(choices=GENDER_CHOICES, default=Gender.MALE)
     dob = models.DateField(verbose_name='DOB')
-    occupation = models.IntegerField(choices=OCCUPATION_CHOICES,default=Occupation.OCCUPATION_1)
+    occupation = models.ForeignKey(Occupation, on_delete=models.CASCADE)
     marital_status = models.IntegerField(choices=MARITAL_STATUS_CHOICES, default=MaritalStatus.SINGLE)
     mobile = models.CharField(max_length=10, verbose_name='Mobile Number')
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    security_question = models.IntegerField(choices=SECURITY_QUESTION_CHOICES, default=SecurityQuestion.SQ_1)
+    security_question = models.ForeignKey(SecurityQuestion, on_delete=models.CASCADE)
     security_answer = models.CharField(max_length=48)
     plan = models.IntegerField(choices=MEMBERSHIP_PLAN_CHOICES, default=MembershipPlan.NO)
 
@@ -138,6 +126,7 @@ class StreamSchedule(models.Model):
     start_time = models.DateTimeField(verbose_name='Start Time')
     end_time = models.DateTimeField(verbose_name='End Time')
     subject = models.CharField(max_length=128)
+    video_url = models.TextField(verbose_name='video room url', null=True, blank=True)
 
     def __str__(self):
         return str(self.subject) + '--' + str(self.assessor.department)
@@ -180,7 +169,7 @@ class TestQuestion(models.Model):
 
 
 class Test(models.Model):
-    identifier = models.CharField(verbose_name='Test', max_length=10)
+    code = models.CharField(verbose_name='Test', max_length=10)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
 
@@ -209,4 +198,5 @@ class ProgressReport(models.Model):
     report = models.TextField(verbose_name='report')
     reporting_date = models.DateField(verbose_name='date joined', auto_now_add=True)
 
-
+    def  __str__(self):
+        return self.assessor + " -- " + self.student

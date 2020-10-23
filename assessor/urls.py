@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 
 from rest_framework.routers import DefaultRouter
 from assessor.views import AvailabilityViewSet, BriefcaseViewSet, \
-    AssessorDept, AssessorProfile
+    AssessorDept, AssessorProfile, DepartmentViewSet, PositionViewSet
 
 router = DefaultRouter()
 
@@ -14,5 +14,7 @@ urlpatterns = [
 
 router.register(r'availablity', AvailabilityViewSet)
 router.register(r'breifcase', BriefcaseViewSet)
+router.register(r'department', DepartmentViewSet)
+router.register(r'position', PositionViewSet)
 
 urlpatterns += router.urls
