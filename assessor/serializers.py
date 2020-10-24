@@ -19,6 +19,7 @@ class AssessorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assessor
         fields ='__all__'
+        depth = 1
 
 
 class AvailabilitySerializer(serializers.ModelSerializer):

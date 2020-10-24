@@ -56,11 +56,11 @@ class Signup(APIView):
                     last_name = validated_data.get('lastname'),
                     gender = validated_data.get('gender'),
                     dob = validated_data.get('dob'),
-                    occupation = validated_data.get('occupation'),
+                    occupation_id = validated_data.get('occupation'),
                     marital_status = validated_data.get('marital'),
                     mobile = validated_data.get('mobile'),
                     address = address,
-                    security_question = validated_data.get('squestion'),
+                    security_question_id = validated_data.get('squestion'),
                     security_answer = validated_data.get('sanswer'),
                     plan = validated_data.get('plan', 1)
             )

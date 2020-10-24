@@ -1,5 +1,5 @@
 from django.db import models
-from api.models  import User
+from api.models  import User, Role
 
 
 class Gender:
@@ -29,10 +29,10 @@ class Department(models.Model):
 
 
 class Position(models.Model):
-    designation = models.CharField(verbose_name='Department Name', max_length=64)
+    designation = models.CharField(verbose_name='Designation', max_length=64)
 
     def __str__(self):
-        return str(self.name)
+        return str(self.designation)
 
 
 class Assessor(models.Model):
@@ -45,7 +45,7 @@ class Assessor(models.Model):
     position = models.ForeignKey(Position, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
-        if self.user and self.user.is_staff:
+        if self.user and (self.user.role == Role.ASSESSOR):
             super().save(*args,**kwargs)
         else:
             raise  ValueError("User has not permission to become Assessor.")

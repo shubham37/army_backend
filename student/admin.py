@@ -1,7 +1,7 @@
 from django.contrib import admin
 from student.models import Student, State, City, Pincode, PostOffice, \
     Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
-        TestQuestion, Test, TestSubmission, ProgressReport
+        TestQuestion, Test, TestSubmission, ProgressReport, Instruction
 
 
 admin.site.register(Student)
@@ -18,3 +18,4 @@ admin.site.register(TestQuestion)
 admin.site.register(Test)
 admin.site.register(TestSubmission)
 admin.site.register(ProgressReport)
+admin.site.register(Instruction)

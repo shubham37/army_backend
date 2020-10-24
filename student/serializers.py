@@ -1,7 +1,7 @@
 from rest_framework import  serializers
 from student.models import Student, State, City, Pincode, PostOffice, \
     Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
-        TestQuestion, Test, TestSubmission, ProgressReport
+        TestQuestion, Test, TestSubmission, ProgressReport, Instruction
         
 
 
@@ -102,3 +102,10 @@ class ProgressReportSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProgressReport
         fields = '__all__'
+
+
+class InstructionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Instruction
+        fields = '__all__'
+        depth = 1

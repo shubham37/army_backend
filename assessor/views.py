@@ -1,4 +1,5 @@
 import datetime
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
@@ -13,8 +14,10 @@ from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer, \
     AssessorSerializer, DepartmentSerializer, PositionSerializer
 from api.permissions import IsAssessorAuthenticated
 
-from student.models import StreamSchedule
-from student.serializers import StreamScheduleSerializer
+from student.models import StreamSchedule, Instruction, \
+    TestSubmission, ProgressReport
+from student.serializers import StreamScheduleSerializer, \
+    InstructionSerializer, ProgressReportSerializer, TestSubmissionSerializer
 
 
 class AvailabilityViewSet(ViewSet):
@@ -95,8 +98,8 @@ class AvailabilityViewSet(ViewSet):
             availabilities = Availability.objects.filter(assessor=assessor, id__in=schedules)
             if availabilities.exists():
                 availabilities.delete()
-                return Response(data={"detail":"Record Deleted Successfully."}, status=status.HTTP_200_OK)            
-            return Response(data={"detail":"Record is not Exist."}, status=status.HTTP_200_OK)            
+                return Response(data={'is_delete':True,"detail":"Record Deleted Successfully."}, status=status.HTTP_200_OK)            
+            return Response(data={'is_delete':False,"detail":"Record is not Exist."}, status=status.HTTP_200_OK)            
         except Exception as e:
             return Response(data={"error":e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -104,13 +107,6 @@ class AvailabilityViewSet(ViewSet):
     @action(detail=False, methods=['GET'], permission_classes=[IsAssessorAuthenticated,])
     def today(self, request):
         today = datetime.datetime.today()
-        # query_set = self.queryset.filter(assessor__user=request.user, status=1, start_time__date=today)
-        # if query_set.exists():
-        #     serialize = self.serializer_class(query_set, many=True)
-        #     availabilities = serialize.data
-        # else:
-        #     availabilities = []
-
         streams = StreamSchedule.objects.filter(assessor__user=request.user, start_time__date=today)
         if streams.exists():
             serialize = StreamScheduleSerializer(streams, many=True)
@@ -119,7 +115,6 @@ class AvailabilityViewSet(ViewSet):
             not_availabilities = []
 
         context = {
-            # "availabilities": availabilities,
             "schedules": not_availabilities
         }
         return Response(context, status=status.HTTP_200_OK)
@@ -221,7 +216,7 @@ class AssessorDept(APIView):
         response = {}
 
         assessors = Assessor.objects.filter(
-            department=dept_code
+            department__code=dept_code
         )
         if assessors.exists():
             serialize = self.serializer_classes(assessors, many=True)
@@ -277,3 +272,121 @@ class PositionViewSet(ViewSet):
             serialize = self.serializer_class(self.queryset, many=True)
             return Response(data=serialize.data, status=status.HTTP_200_OK)
         return Response(data={'detail': "No Position Found."}, status=status.HTTP_200_OK)
+
+
+class AssessorInstruction(ViewSet):
+    queryset = StreamSchedule.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = StreamScheduleSerializer
+
+    # Call from Assessor to see Instruction who has training shcedule with them.
+    def list(self, request):
+        # import ipdb; ipdb.set_trace()
+        user = request.user
+        students_id = set(self.queryset.filter(assessor__user=user).values_list('student_id'))
+        instruction = set(Instruction.objects.filter(assessor__user=user, student_id__in=students_id).values_list('student_id'))
+        ids = students_id - instruction
+        streams = self.queryset.filter(student_id__in=ids)
+        if streams.exists():
+            serialize = self.serializer_class(streams, many=True)
+            return Response(data={'is_success':True, 'streams': serialize.data}, status=status.HTTP_200_OK)
+        return Response(data={'is_success':False, 'detail': "No Data Found."}, status=status.HTTP_200_OK)
+
+    # Call from Assessor to update Instruction who has training shcedule with them.
+    @action(detail=False, methods=['POST'])
+    def add_update(self, request):
+        data = request.data
+        try:
+            ins, _ = Instruction.objects.update_or_create(data)
+            return Response(data={'detail': "Done."}, status=status.HTTP_200_OK)
+        except  Exception as e:
+            return Response(data={'error': e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Call from Student to See Instruction Which is given by Assessor
+    @action(detail=False, methods=['GET'])
+    def student_list(self, request):
+        instruction = Instruction.objects.filter(student__user=request.user)
+        if instruction.exists():
+            serialize = self.serializer_class(instruction)
+            return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'detail': "No Data Found."}, status=status.HTTP_200_OK)
+
+
+class TestChecking(ViewSet):
+    queryset = TestSubmission.objects.all()
+    serializer_class = TestSubmissionSerializer
+    permission_classes = [IsAuthenticated,]
+
+    # Call from Assessor on Test Report Tab to see tests 
+    def list(self, request):
+        assessor = Assessor.objects.get(user=request.user)
+        students = StreamSchedule.objects.filter(assessor=assessor).values_list('student_id')
+        tests = self.queryset.filter(student_id__in=students,submission_status=2, checking_status=1)
+        if tests:
+            serialize = self.serializer_class(tests, many=True)
+            return Response(data={'is_data':True, 'tests':serialize.data}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
+        
+
+    # Call from Assessor on Test Report Tab to update his assessmet on tests report
+    @action(detail=False, methods=['Post'])
+    def update_reports(self, request):
+        data = request.data # remarks and comment and id
+        assessor = Assessor.objects.get(user=request.user)
+        tests = self.queryset.filter(id = data.get('id'))
+        if tests.exists():
+            tests.update(
+                remark =data.get('remark'),
+                comment =data.get('comment'),
+                checking_status = 2,
+                assessor =assessor
+            )
+            return Response(data={'is_update':True}, status=status.HTTP_205_RESET_CONTENT)
+        else:
+            return Response(data={'is_update':False}, status=status.HTTP_200_OK)
+
+
+class ProgressReports(ViewSet):
+    queryset = ProgressReport.objects.all()
+    serializer_class = ProgressReportSerializer
+    permission_classes = [IsAuthenticated,]
+
+    # Call from Assessor on Progress Report Tab to see report to update
+    def list(self, request):
+        assessor = Assessor.objects.get(user=request.user)
+        students = StreamSchedule.objects.filter(assessor=assessor, status=2).values_list('student')
+        reports =self.queryset.filter(student__in=students)
+        if reports:
+            serialize = self.serializer_class(reports, many=True)
+            return Response(data={'is_data':True, 'reports':serialize.data}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
+        
+
+    # Call from Assessor on Test Report Tab to update his assessmet on tests report
+    @action(detail=False, methods=['Post'])
+    def update_progress(self, request):
+        data = request.data # remarks and comment and id
+        assessor = Assessor.objects.get(user=request.user)
+        progress_reports = self.queryset.filter(id = data.get('id'))
+        if progress_reports.exists():
+            progress_reports.update(
+                report =data.get('report'),
+                assessor =assessor
+            )
+            return Response(data={'is_update':True}, status=status.HTTP_205_RESET_CONTENT)
+        else:
+            return Response(data={'is_update':False}, status=status.HTTP_200_OK)
+
+class Rating(ViewSet):
+    queryset = StreamSchedule.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = StreamScheduleSerializer
+
+    def list(self, request):
+        ratings = self.queryset.filter(assessor__user=request.user)
+        if ratings.exists():
+            serialize = self.serializer_class(ratings, many=True)
+            return Response(data={'is_data':True,"ratings":serialize.data}, status=status.HTTP_200_OK)
+        return Response(data={'is_data':False,'detail': "No Data Found."}, status=status.HTTP_200_OK)

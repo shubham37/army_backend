@@ -119,6 +119,16 @@ class Student(models.Model):
         return str(self.first_name) + str(self.middle_name) + str(self.last_name)
 
 
+class StreamStatus:
+    PENDING = 1
+    COMPLETED = 2
+    EXPIRED = 3
+
+STREAMSTATUS_CHOICES = [
+    (StreamStatus.PENDING, 'Pending'),
+    (StreamStatus.COMPLETED, 'Complete'),
+    (StreamStatus.EXPIRED, 'Expired')
+]
 
 class StreamSchedule(models.Model):
     student = models.ForeignKey(Student, on_delete=models.ForeignKey, null=True, blank=True)
@@ -127,6 +137,10 @@ class StreamSchedule(models.Model):
     end_time = models.DateTimeField(verbose_name='End Time')
     subject = models.CharField(max_length=128)
     video_url = models.TextField(verbose_name='video room url', null=True, blank=True)
+    status = models.IntegerField(choices=STREAMSTATUS_CHOICES, default=StreamStatus.PENDING)
+    rating = models.IntegerField(default=0)
+    remark = models.CharField(verbose_name='Remarks', max_length=96, null=True, blank=True)
+    comment = models.TextField(verbose_name='Comment',null=True, blank=True)
 
     def __str__(self):
         return str(self.subject) + '--' + str(self.assessor.department)
@@ -151,13 +165,13 @@ class TestImages(models.Model):
 class TestQuestion(models.Model):
     word = models.CharField(max_length=20, blank=True, null=True)
     text = models.CharField(max_length=120, blank=True, null=True)
-    images = models.ManyToManyField(TestImages, blank=True, null=True)
+    images = models.ManyToManyField(TestImages, blank=True)
 
-    def save(self, *args, **kwargs):
-        if (self.word and self.text) or (self.images and self.text) or (self.word and self.images):
-            raise  ValueError("Set Only One Thing For Test Question")
-        else:
-            super().save(*args,**kwargs)
+    # def save(self, *args, **kwargs):
+    #     if (self.word and self.text) or (self.images and self.text) or (self.word and self.images):
+    #         raise  ValueError("Set Only One Thing For Test Question")
+    #     else:
+    #         super().save(*args,**kwargs)
 
     def __str__(self):
         if self.word:
@@ -172,15 +186,17 @@ class Test(models.Model):
     code = models.CharField(verbose_name='Test', max_length=10)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
+    question_display_time = models.IntegerField(default=0)
+    answer_display_time = models.IntegerField(default=0)
 
     def __str__(self):
-        return str(self.identifier)
+        return str(self.code)
 
 
 class TestSubmission(models.Model):
     test = models.ForeignKey(Test, on_delete=models.CASCADE)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    answer = models.TextField(verbose_name='Test Answer')
+    answer = models.TextField(verbose_name='Test Answer', null=True, blank=True)
     submission_status = models.IntegerField(choices=STATUS_CHOICES, default=Status.PENDING)
     remark = models.CharField(verbose_name='Remarks', max_length=96, null=True, blank=True)
     comment = models.TextField(verbose_name='Comment',null=True, blank=True)
@@ -200,3 +216,11 @@ class ProgressReport(models.Model):
 
     def  __str__(self):
         return self.assessor + " -- " + self.student
+
+class Instruction(models.Model):
+    assessor = models.ForeignKey(Assessor, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student,  on_delete=models.CASCADE)
+    instruction = models.TextField(verbose_name='Instruction By Assessor', null=True, blank=True)
+
+    # def  __str__(self):
+    #     return self.assessor

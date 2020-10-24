@@ -173,7 +173,7 @@ class SecurityQuestionView(APIView):
     def get(self, request):
         queryset = SecurityQuestion.objects.all()
         serialize = self.serializer_class(queryset, many=True)
-        return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'squestions':serialize.data}, status=status.HTTP_200_OK)
 
 
 class OccupationView(APIView):
@@ -183,7 +183,7 @@ class OccupationView(APIView):
     def get(self, request):
         queryset = Occupation.objects.all()
         serialize = self.serializer_class(queryset, many=True)
-        return Response(data=serialize.data, status=status.HTTP_200_OK)
+        return Response(data={'occupations':serialize.data}, status=status.HTTP_200_OK)
 
 
 class StudentProfile(APIView):
@@ -220,6 +220,38 @@ class StreamScheduleViewSet(ViewSet):
             "StreamSchedules": StreamSchedules
         }
         return Response(data=context, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['POST'], permission_classes=[IsStudentAuthenticated,])
+    def update_data(self, request):
+        data = request.data
+        instance = self.queryset.filter(id=data.get('id'))
+        if instance.exists():
+            try:
+                instance.update(status=2, rating=int(data.get('rating')))
+                return Response("Update Successfull", status=status.HTTP_202_ACCEPTED)
+            except Exception as e:
+                return Response(e.args, status=status.HTTP_400_BAD_REQUEST)
+        return Response("This collection is not yours", status=status.HTTP_404_NOT_FOUND)
+
+
+    # Call From Student on Dept Wise Training Tab
+    @action(detail=False, methods=['POST'], permission_classes=[IsStudentAuthenticated,])
+    def dept_wise(self, request):
+        # import ipdb; ipdb.set_trace()
+        dept_code = request.data.get('dept_code')
+        try:
+            student = Student.objects.get(user=request.user)
+        except Exception as e:
+            return Response(data={'error':"User Not Found"}, status=status.HTTP_401_UNAUTHORIZED)
+        streams = StreamSchedule.objects.filter(student=student)
+        dept_streams = streams.filter(assessor__department__code=dept_code, status=1).order_by('start_time')
+
+        data = []
+        if dept_streams.exists():
+            serialize = self.serializer_class(dept_streams.last())
+            data = serialize.data
+        return Response(data={'training':data}, status=status.HTTP_200_OK)
+
 
     # Call from Student on Schedule for Today Tab to list of today streamSchedules
     @action(detail=False, methods=['GET'], permission_classes=[IsStudentAuthenticated,])
@@ -278,7 +310,7 @@ class TestView(ViewSet):
         return Response(data={'detail':'No Test Found.'}, status=status.HTTP_200_OK)
 
 
-class TestSubmission(ViewSet):
+class TestSubmissions(ViewSet):
     queryset = TestSubmission.objects.all()
     permission_classes = (IsStudentAuthenticated,)
     serializer_class = TestSubmissionSerializer
@@ -288,27 +320,27 @@ class TestSubmission(ViewSet):
         tests = self.queryset.filter(student__user = request.user)
         if tests:
             serialize = self.serializer_class(tests, many=True)
-            return Response(data={'status':serialize.data}, status=status.HTTP_200_OK)
+            return Response(data={'is_data':True, 'status':serialize.data}, status=status.HTTP_200_OK)
         else:
-            return Response(data={'detail':"No Data Exist"}, status=status.HTTP_200_OK)
+            return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
     # Call from Student on Test Report Tab to see tests report dept wise 
-    @action(detail=False, methods=['POST'])
-    def test_reports(self, request):
-        dept_code = request.data.get('code')
-        tests = self.queryset.filter(student__user = request.user, assessor__department= dept_code)
+    @action(detail=True, methods=['GET'])
+    def reports(self, request, pk=None):
+        dept_code = pk
+        tests = self.queryset.filter(student__user = request.user, assessor__department__code= dept_code)
         if tests:
             serialize = self.serializer_class(tests, many=True)
-            return Response(data={'reports':serialize.data}, status=status.HTTP_200_OK)
+            return Response(data={'is_data':True, 'reports':serialize.data}, status=status.HTTP_200_OK)
         else:
-            return Response(data={'detail':"No Data Exist"}, status=status.HTTP_200_OK)
+            return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
-    # Call from Student On PSYCH Test Complete to Submit Anwer Against PSYCH Test
+
+    #  Call from Student On PSYCH Test Complete to Submit Anwer Against PSYCH Test
     @action(detail=False, methods=['POST'])
     def test_submit(self, request):
-        test_ans = request.data
-        test_code = test_ans.get('code',None)
-
+        test_code = request.data.get('code',None)
+        test_ans = request.data.get('answer','')
         try:
             student = Student.objects.get(user=request.user)
         except Exception as e:
@@ -316,13 +348,30 @@ class TestSubmission(ViewSet):
 
         try:
             if test_code is not None:
+                test  = Test.objects.get(code=test_code)
                 test_submission = TestSubmission.objects.create(
-                    test__code=test_code, student=student, answer=test_ans.get('answer', '')
+                    test=test, student=student, answer=test_ans, submission_status=2
                 )
                 return Response(data={'detail':"Test Submitted Successfully."}, status=status.HTTP_200_OK)
             return Response(data={'detail':"Please Try Again Later."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+    # Call from Student on TEST for question
+    @action(detail=True, methods=['GET'])
+    def dept(self, request, pk=None):
+        test_code = pk
+        try:
+            student = Student.objects.get(user=request.user)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+        today = datetime.datetime.today()
+        test = Test.objects.get(code=test_code, testsubmission__student=student, testsubmission__submission_date__month=today.month)
+        if test:
+            return Response(data={'is_data':False, 'detail':"Already Submitted For This Month"}, status=status.HTTP_200_OK)
+        else:
+            serialize = TestSerializer(test)
+            return Response(data={'is_data':True, 'test':serialize.data}, status=status.HTTP_200_OK)
 
 
 class ProgressReport(ViewSet):
@@ -330,12 +379,17 @@ class ProgressReport(ViewSet):
     permission_classes = [IsAuthenticated, ]
     serializer_class = ProgressReportSerializer
 
-    def get(self, request, code):
+    @action(detail=True, methods=['GET'])
+    def reports(self, request, pk=None):
+        dept_code = pk
         try:
-            test_question = ProgressReport.objects.filter(
-                assessor=test_code
-            )
-            serialize = self.serializer_class(test_question)
-            return Response(data=serialize.data, status=status.HTTP_200_OK)
+            student = Student.objects.get(user=request.user)
         except Exception as e:
-            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+
+        tests = self.queryset.filter(student = student, assessor__department__code= dept_code)
+        if tests:
+            serialize = self.serializer_class(tests, many=True)
+            return Response(data={'is_data':True, 'reports':serialize.data}, status=status.HTTP_200_OK)
+        else:
+            return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
