@@ -207,7 +207,7 @@ class BriefcaseViewSet(ViewSet):
 
 
 class AssessorDept(APIView):
-    permission_classes = [IsAuthenticated, ]
+    permission_classes = [AllowAny, ]
     serializer_classes = AssessorSerializer
 
     def get(self, request, dep):

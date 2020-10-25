@@ -1,3 +1,4 @@
+import random
 from django.shortcuts import render
 from django.db.models import Q
 from django.core.mail import EmailMessage
@@ -95,18 +96,19 @@ class Login(APIView):
             username =str(data.get('username'))
             password =str(data.get('password'))
             # import ipdb ; ipdb.set_trace()
-
+            print(username)
+            print(password)
             if not User.objects.filter((
                 Q(email=username) | Q(username=username)
                 )).exists():
-                raise ValueError("Username Not Found.")
+                return Response(data={'reason':'Username Not Found.'}, status=status.HTTP_403_BAD_REQUEST)
             else:
                 user = User.objects.filter((
                     Q(email=username) | Q(username=username)
                 ),
                 password=password)
                 if not user:
-                    raise ValueError("Password is Not Matched.")
+                    return Response(data={'reason':'Password is Not Matched.'}, status=status.HTTP_403_FORBIDDEN)
                 else:
                     token, _ = Token.objects.get_or_create(user=user.last())
                     response = {
@@ -115,8 +117,6 @@ class Login(APIView):
                         'user_id': str(token.user_id)
                     }
                 return Response(data=response, status=status.HTTP_200_OK)
-        except ValueError as e:
-            return Response(data={'error':e}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -206,19 +206,17 @@ class SendOTP(APIView):
         """
             Api for Sent Reset Password Link To User Email.
         """
-        try:
-            email = request.data.get('email',None)
-            otp = 2345
-            if email is not None:
-                subject = "OTP To Enter Into Test"
-                body = "Hi,\n Here is your requested otp: \n  {} \n\nThanks & Regards\n Army".format((otp))
-                email = EmailMessage(subject=subject, body=body, to=(email,))
-                try:
-                    email.send()
-                    return Response(data={'detail':"OTP has been sent to email.Please check.", "OTP":otp}, status=status.HTTP_200_OK)
-                except Exception as e:
-                    return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(data={'details':"There is no email."}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        email = request.data.get('email','')
+        otp = random.randint(1000,9999)
+
+        if email:
+            subject = "OTP To Enter Into Test"
+            body = "Hi,\n Here is your requested otp: \n  {} \n\nThanks & Regards\n Army".format((otp))
+            email = EmailMessage(subject=subject, body=body, to=(email,))
+            try:
+                email.send()
+                return Response(data={'detail':"OTP has been sent to email.Please check.", "OTP":otp}, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(data={'details':"There is no email."}, status=status.HTTP_400_BAD_REQUEST)
