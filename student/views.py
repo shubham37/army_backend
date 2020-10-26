@@ -1,4 +1,5 @@
 import datetime
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
@@ -317,10 +318,28 @@ class TestSubmissions(ViewSet):
 
     # Call from Student on Test Status Tab to see tests status of him self 
     def list(self, request):
-        tests = self.queryset.filter(student__user = request.user)
-        if tests:
-            serialize = self.serializer_class(tests, many=True)
-            return Response(data={'is_data':True, 'status':serialize.data}, status=status.HTTP_200_OK)
+        today = datetime.datetime.today()
+
+        all_tests = Test.objects.all()
+        done_tests = list(all_tests.filter(
+            testsubmission__student__user = request.user, 
+            testsubmission__submission_status=2, 
+            testsubmission__submission_date__month=today.month
+        ).values('code', 'testsubmission__submission_date'))
+
+        pending_tests = list(all_tests.exclude(
+            (
+                Q(testsubmission__student__user = request.user) |
+                Q(testsubmission__submission_status=2) |
+                Q(testsubmission__submission_date__month=today.month)
+            )
+        ).values_list('code', flat=True))
+        import ipdb; ipdb.set_trace()
+        for t in pending_tests:
+            done_tests.update({'code':t,'testsubmission__submission_date':None})
+
+        if done_tests:
+            return Response(data={'is_data':True,  'status':done_tests}, status=status.HTTP_200_OK)
         else:
             return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
 
