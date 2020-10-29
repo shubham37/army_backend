@@ -244,8 +244,9 @@ class StreamScheduleViewSet(ViewSet):
             student = Student.objects.get(user=request.user)
         except Exception as e:
             return Response(data={'error':"User Not Found"}, status=status.HTTP_401_UNAUTHORIZED)
+
         streams = StreamSchedule.objects.filter(student=student)
-        dept_streams = streams.filter(assessor__department__code=dept_code, status=1).order_by('start_time')
+        dept_streams = streams.filter(assessor__department__code=dept_code, status=1, start_time__gte=datetime.datetime.now()).order_by('start_time')
 
         data = []
         if dept_streams.exists():
@@ -327,16 +328,16 @@ class TestSubmissions(ViewSet):
             testsubmission__submission_date__month=today.month
         ).values('code', 'testsubmission__submission_date'))
 
-        pending_tests = list(all_tests.exclude(
+        pending_tests = all_tests.exclude(
             (
                 Q(testsubmission__student__user = request.user) |
                 Q(testsubmission__submission_status=2) |
                 Q(testsubmission__submission_date__month=today.month)
             )
-        ).values_list('code', flat=True))
-        import ipdb; ipdb.set_trace()
+        ).values_list('code', flat=True)
+    
         for t in pending_tests:
-            done_tests.update({'code':t,'testsubmission__submission_date':None})
+            done_tests.append({'code':t,'testsubmission__submission_date':None})
 
         if done_tests:
             return Response(data={'is_data':True,  'status':done_tests}, status=status.HTTP_200_OK)

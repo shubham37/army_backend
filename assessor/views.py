@@ -15,9 +15,10 @@ from assessor.serializers import AvailabilitySerializer, BriefcaseSerializer, \
 from api.permissions import IsAssessorAuthenticated
 
 from student.models import StreamSchedule, Instruction, \
-    TestSubmission, ProgressReport
+    TestSubmission, ProgressReport, Student
 from student.serializers import StreamScheduleSerializer, \
-    InstructionSerializer, ProgressReportSerializer, TestSubmissionSerializer
+    InstructionSerializer, ProgressReportSerializer, \
+        TestSubmissionSerializer, StudentSerializer
 
 
 class AvailabilityViewSet(ViewSet):
@@ -283,12 +284,14 @@ class AssessorInstruction(ViewSet):
     def list(self, request):
         # import ipdb; ipdb.set_trace()
         user = request.user
-        students_id = set(self.queryset.filter(assessor__user=user).values_list('student_id'))
-        instruction = set(Instruction.objects.filter(assessor__user=user, student_id__in=students_id).values_list('student_id'))
+        students_id = set(self.queryset.filter(assessor__user=user).values_list('student_id', flat=True))
+        instruction = set(Instruction.objects.filter(assessor__user=user, student_id__in=students_id).values_list('student_id', flat=True))
         ids = students_id - instruction
-        streams = self.queryset.filter(student_id__in=ids)
-        if streams.exists():
-            serialize = self.serializer_class(streams, many=True)
+        students = Student.objects.filter(id__in=set(ids))
+        # student_ids = set(self.queryset.filter(student_id__in=ids).values_list('student_id', flat=True))
+        if students.exists():
+            serialize = StudentSerializer(students, many=True)
+            print(serialize.data)
             return Response(data={'is_success':True, 'streams': serialize.data}, status=status.HTTP_200_OK)
         return Response(data={'is_success':False, 'detail': "No Data Found."}, status=status.HTTP_200_OK)
 
