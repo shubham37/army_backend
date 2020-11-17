@@ -219,7 +219,7 @@ class ProgressReport(models.Model):
 
 class Instruction(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.CASCADE)
-    student = models.ForeignKey(Student,  on_delete=models.CASCADE)
+    # student = models.ForeignKey(Student,  on_delete=models.CASCADE)
     instruction = models.TextField(verbose_name='Instruction By Assessor', null=True, blank=True)
 
     # def  __str__(self):

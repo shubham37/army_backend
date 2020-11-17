@@ -348,6 +348,7 @@ class TestSubmissions(ViewSet):
     @action(detail=True, methods=['GET'])
     def reports(self, request, pk=None):
         dept_code = pk
+        import ipdb; ipdb.set_trace()
         tests = self.queryset.filter(student__user = request.user, assessor__department__code= dept_code)
         if tests:
             serialize = self.serializer_class(tests, many=True)

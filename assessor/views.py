@@ -276,41 +276,40 @@ class PositionViewSet(ViewSet):
 
 
 class AssessorInstruction(ViewSet):
-    queryset = StreamSchedule.objects.all()
+    queryset = Instruction.objects.all()
     permission_classes = (IsAuthenticated,)
-    serializer_class = StreamScheduleSerializer
+    serializer_class = InstructionSerializer
 
     # Call from Assessor to see Instruction who has training shcedule with them.
     def list(self, request):
         # import ipdb; ipdb.set_trace()
         user = request.user
-        students_id = set(self.queryset.filter(assessor__user=user).values_list('student_id', flat=True))
-        instruction = set(Instruction.objects.filter(assessor__user=user, student_id__in=students_id).values_list('student_id', flat=True))
-        ids = students_id - instruction
-        students = Student.objects.filter(id__in=set(ids))
-        # student_ids = set(self.queryset.filter(student_id__in=ids).values_list('student_id', flat=True))
-        if students.exists():
-            serialize = StudentSerializer(students, many=True)
-            print(serialize.data)
-            return Response(data={'is_success':True, 'streams': serialize.data}, status=status.HTTP_200_OK)
+        instructions = self.queryset.filter(assessor__user=user)
+        if instructions:
+            serialize = self.serializer_class(instructions.last())
+            return Response(data={'is_success':True, 'instruction': serialize.data}, status=status.HTTP_200_OK)
         return Response(data={'is_success':False, 'detail': "No Data Found."}, status=status.HTTP_200_OK)
 
     # Call from Assessor to update Instruction who has training shcedule with them.
     @action(detail=False, methods=['POST'])
     def add_update(self, request):
-        data = request.data
-        try:
-            ins, _ = Instruction.objects.update_or_create(data)
-            return Response(data={'detail': "Done."}, status=status.HTTP_200_OK)
-        except  Exception as e:
-            return Response(data={'error': e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        instruction_id = request.data.get('id', None)
+        assessor = request.user
+        instruction = request.data.get('instruction', '')
+        if instruction_id is not None:
+            d = self.queryset.filter(id=instruction_id)
+            d.update(instruction=str(instruction))
+        else:
+            ins = Instruction.objects.create(assessor=assessor, instruction=instruction)
+        return Response(data={'detail': "Done."}, status=status.HTTP_200_OK)
 
     # Call from Student to See Instruction Which is given by Assessor
     @action(detail=False, methods=['GET'])
     def student_list(self, request):
-        instruction = Instruction.objects.filter(student__user=request.user)
-        if instruction.exists():
-            serialize = self.serializer_class(instruction)
+        assessors = set(StreamSchedule.objects.filter(student__user=request.user).values_list('assessor_id'))
+        instructions = self.queryset.filter(assessor_id__in=assessors)
+        if instructions.exists():
+            serialize = self.serializer_class(instructions, many=True)
             return Response(data=serialize.data, status=status.HTTP_200_OK)
         return Response(data={'detail': "No Data Found."}, status=status.HTTP_200_OK)
 
@@ -336,6 +335,7 @@ class TestChecking(ViewSet):
     @action(detail=False, methods=['Post'])
     def update_reports(self, request):
         data = request.data # remarks and comment and id
+        # import ipdb; ipdb.set_trace()
         assessor = Assessor.objects.get(user=request.user)
         tests = self.queryset.filter(id = data.get('id'))
         if tests.exists():
@@ -382,6 +382,7 @@ class ProgressReports(ViewSet):
         else:
             return Response(data={'is_update':False}, status=status.HTTP_200_OK)
 
+
 class Rating(ViewSet):
     queryset = StreamSchedule.objects.all()
     permission_classes = (IsAuthenticated,)
@@ -390,6 +391,14 @@ class Rating(ViewSet):
     def list(self, request):
         ratings = self.queryset.filter(assessor__user=request.user)
         if ratings.exists():
-            serialize = self.serializer_class(ratings, many=True)
-            return Response(data={'is_data':True,"ratings":serialize.data}, status=status.HTTP_200_OK)
+            data = {
+                'ZERO': ratings.filter(rating=0).count(),
+                'ONE': ratings.filter(rating=1).count(),
+                'TWO': ratings.filter(rating=2).count(),
+                'THREE': ratings.filter(rating=3).count(),
+                'FOUR': ratings.filter(rating=4).count(),
+                'FIVE': ratings.filter(rating=5).count()
+            }
+            # serialize = self.serializer_class(ratings, many=True)
+            return Response(data={'is_data':True,"ratings": data}, status=status.HTTP_200_OK)
         return Response(data={'is_data':False,'detail': "No Data Found."}, status=status.HTTP_200_OK)
