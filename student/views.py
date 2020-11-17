@@ -324,16 +324,18 @@ class TestSubmissions(ViewSet):
         all_tests = Test.objects.all()
         done_tests = list(all_tests.filter(
             testsubmission__student__user = request.user, 
-            testsubmission__submission_status=2, 
+            testsubmission__submission_status=2,
             testsubmission__submission_date__month=today.month
         ).values('code', 'testsubmission__submission_date'))
 
+        done_tests_code = list(all_tests.filter(
+            testsubmission__student__user = request.user, 
+            testsubmission__submission_status=2, 
+            testsubmission__submission_date__month=today.month
+        ).values('code'))
+
         pending_tests = all_tests.exclude(
-            (
-                Q(testsubmission__student__user = request.user) |
-                Q(testsubmission__submission_status=2) |
-                Q(testsubmission__submission_date__month=today.month)
-            )
+                code__in=done_tests_code
         ).values_list('code', flat=True)
     
         for t in pending_tests:
@@ -347,8 +349,14 @@ class TestSubmissions(ViewSet):
     # Call from Student on Test Report Tab to see tests report dept wise 
     @action(detail=True, methods=['GET'])
     def reports(self, request, pk=None):
+        today = datetime.datetime.today()
+
         dept_code = pk
-        tests = self.queryset.filter(student__user = request.user, assessor__department__code= dept_code)
+        tests = self.queryset.filter(
+            student__user = request.user,
+            assessor__department__code= dept_code,
+            submission_date__month=today.month
+        )
         if tests:
             serialize = self.serializer_class(tests, many=True)
             return Response(data={'is_data':True, 'reports':serialize.data}, status=status.HTTP_200_OK)
