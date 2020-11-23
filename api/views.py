@@ -1,6 +1,7 @@
 import random
+import datetime
 from django.shortcuts import render
-from django.db.models import Q
+from django.db.models import Q, Avg, Sum
 from django.core.mail import EmailMessage
 
 from rest_framework.views import  APIView
@@ -9,9 +10,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
-from api.models import User, Role
-from student.models import Student, Address, PostOffice
+from api.models import User, Role, CurrentAffair
+from student.models import Student, Address, PostOffice, StreamSchedule
 from api.permissions import IsStudentAuthenticated
+from api.serializers import CurrentAffairSerializer
 
 
 class Signup(APIView):
@@ -49,6 +51,7 @@ class Signup(APIView):
 
             address, _ = Address.objects.get_or_create(**address)
 
+            print(validated_data.get('profile'))
             # 3. Student Create
             student = dict(
                     user = user,
@@ -63,7 +66,8 @@ class Signup(APIView):
                     address = address,
                     security_question_id = validated_data.get('squestion'),
                     security_answer = validated_data.get('sanswer'),
-                    plan = validated_data.get('plan', 1)
+                    plan = validated_data.get('plan', 1),
+                    image=validated_data.get('profile')
             )
 
             student, _ = Student.objects.get_or_create(**student)
@@ -220,3 +224,64 @@ class SendOTP(APIView):
                 return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response(data={'details':"There is no email."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CurrentAffairView(APIView):
+    permission_classes = [AllowAny, ]
+    serializer_classes = CurrentAffairSerializer
+
+    def get(self, request, cat):
+        user = request.user
+        category = str(cat)
+        response = {}
+
+        ca = CurrentAffair.objects.filter(
+            category=category
+        )
+        if ca.exists():
+            serialize = self.serializer_classes(ca, many=True)
+            response.update({
+                'is_exist':True,
+                'ca': serialize.data
+            })
+        else:
+            response.update({
+                'is_exist':False,
+                'ca': []
+            })
+        return  Response(data=response, status=status.HTTP_200_OK)
+
+
+class AssessorStar(APIView):
+    permission_classes = [AllowAny, ]
+    serializer_classes = CurrentAffairSerializer
+
+    def get(self, request):
+        response = {
+            'is_exist': False,
+            'assessor': [],
+            'assessors': []
+        }
+
+        assessor = StreamSchedule.objects.filter(
+            start_time__date=datetime.datetime.today()
+        ).values(
+            'assessor__first_name', 'assessor__last_name', 'assessor__user__email', 'assessor__image'
+        ).annotate(Avg('rating')).order_by('rating__avg')
+
+        assessors = StreamSchedule.objects.values(
+            'assessor__first_name', 'assessor__last_name', 'assessor__user__email', 'assessor__image'
+        ).annotate(Avg('rating')).order_by('rating__avg')
+
+        if assessor.exists():
+            response.update({
+                'is_exist':True,
+                'assessor': list(assessor)[:1]
+            })
+        if assessors.exists():
+            response.update({
+                'is_exist':True,
+                'assessors': list(assessors)[:3]
+            })
+
+        return  Response(data=response, status=status.HTTP_200_OK)

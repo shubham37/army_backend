@@ -1,7 +1,7 @@
 from rest_framework import  serializers
 from student.models import Student, State, City, Pincode, PostOffice, \
     Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
-        TestQuestion, Test, TestSubmission, ProgressReport, Instruction
+        TestQuestion, Test, TestSubmission, ProgressReport, Instruction, PIQForm
         
 
 
@@ -54,7 +54,7 @@ class OccupationSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
-        fields = ['id','first_name','middle_name','last_name','gender']
+        fields = ['id','first_name','middle_name','last_name','gender', 'image']
 
 
 class StreamScheduleSerializer(serializers.ModelSerializer):
@@ -81,7 +81,7 @@ class TestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Test
         fields = '__all__'
-        depth = 1
+        depth = 2
 
 
 class TestSubmissionSerializer(serializers.ModelSerializer):
@@ -109,3 +109,9 @@ class InstructionSerializer(serializers.ModelSerializer):
         model = Instruction
         fields = '__all__'
         depth = 1
+
+
+class PIQSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PIQForm
+        fields = '__all__'

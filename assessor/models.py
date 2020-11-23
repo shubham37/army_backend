@@ -1,6 +1,8 @@
+import uuid
+import datetime
 from django.db import models
 from api.models  import User, Role
-
+from army_backend.utils import upload_image
 
 class Gender:
     MALE=1
@@ -40,6 +42,11 @@ class Assessor(models.Model):
     first_name = models.CharField(max_length=64)
     middle_name = models.CharField(max_length=64, null=True, blank=True)
     last_name = models.CharField(max_length=64, null=True, blank=True)
+    image = models.ImageField(
+        verbose_name='Upload Your \nProfile Picture', upload_to=upload_image,
+        null=True, blank=True
+        # , validators=[image_extension_validator]
+    )
     gender = models.IntegerField(choices=GENDER_CHOICES, default=Gender.MALE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     position = models.ForeignKey(Position, on_delete=models.CASCADE)

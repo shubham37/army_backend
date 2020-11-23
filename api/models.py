@@ -41,3 +41,29 @@ class User(AbstractBaseUser):
         return True
 
     objects = UserManager()
+
+
+class Category:
+    INTERNATIONAL='International'
+    NATIONAL='National'
+    ECONOMY='Economy'
+    DEFENCE='Defence'
+    SCIENCE_TECH='Science'
+
+
+CATEGORY_CHOICES = [
+    (Category.INTERNATIONAL, 'INTERNATIONAL'),
+    (Category.NATIONAL, 'NATIONAL'),
+    (Category.ECONOMY, 'ECONOMY'),
+    (Category.DEFENCE, 'DEFENCE'),
+    (Category.SCIENCE_TECH, 'SCIENCE_TECH'),
+]
+
+
+class CurrentAffair(models.Model):
+    text = models.TextField(null=True, blank=True)
+    category = models.CharField(choices=CATEGORY_CHOICES, default=Category.INTERNATIONAL, max_length=20)
+
+    def __str__(self):
+        return str(self.text)
+

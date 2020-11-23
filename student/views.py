@@ -1,3 +1,4 @@
+import uuid
 import datetime
 from django.db.models import Q
 from rest_framework import status
@@ -13,13 +14,13 @@ from assessor.models import Assessor, Availability
 
 from student.models import Student, State, City, Pincode, PostOffice, \
     Address, SecurityQuestion, Occupation, StreamSchedule, TestImages, \
-        TestQuestion, Test, TestSubmission, ProgressReport
+        TestQuestion, Test, TestSubmission, ProgressReport, PIQForm
 
 from student.serializers import StudentSerializer, StateSerializer, CitySerializer, \
     PincodeSerializer, PostofficeSerializer, AddressSerializer, SecurityQuestionSerializer, \
         OccupationSerializer, StreamScheduleSerializer, TestImagesSerializer, \
             TestQuestionSerializer, TestSerializer, TestSubmissionSerializer, \
-                ProgressReportSerializer
+                ProgressReportSerializer, PIQSerializer
 
 from api.permissions import  IsStudentAuthenticated
 
@@ -288,7 +289,8 @@ class StreamScheduleViewSet(ViewSet):
                         assessor = assessor,
                         start_time = av.last().start_time,
                         end_time = av.last().end_time,
-                        subject= schedule.get('Subject')
+                        subject= schedule.get('Subject'),
+                        video_url=uuid.uuid4()
                     )
                     av.delete()
                     ss_for_create.append(ss)
@@ -394,11 +396,13 @@ class TestSubmissions(ViewSet):
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
         today = datetime.datetime.today()
-        test = Test.objects.get(code=test_code, testsubmission__student=student, testsubmission__submission_date__month=today.month)
-        if test:
+
+        t = Test.objects.get(code=test_code)
+        test = t.testsubmission_set.filter(student=student, submission_date__month=today.month)
+        if test.exists():
             return Response(data={'is_data':False, 'detail':"Already Submitted For This Month"}, status=status.HTTP_200_OK)
         else:
-            serialize = TestSerializer(test)
+            serialize = TestSerializer(t)
             return Response(data={'is_data':True, 'test':serialize.data}, status=status.HTTP_200_OK)
 
 
@@ -421,3 +425,49 @@ class ProgressReport(ViewSet):
             return Response(data={'is_data':True, 'reports':serialize.data}, status=status.HTTP_200_OK)
         else:
             return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
+
+
+class PIQViewSet(ViewSet):
+    queryset = PIQForm.objects.all()
+    permission_classes = [IsAuthenticated, ]
+    serializer_class = PIQSerializer
+
+    def list(self, request):
+        student = request.user
+        try:
+            piq_form = self.queryset.filter(student__user=student)
+            if piq_form.exists():
+                serialize = self.serializer_class(piq_form.last())
+                return Response(data={'is_data':True, 'piq_form':serialize.data}, status=status.HTTP_200_OK)
+            return Response(data={'is_data':False, 'detail':"No Data Exists"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response(data={'is_data':False, 'error':e}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False, methods=['POST'])
+    def add_form(self, request):
+        try:
+            student = Student.objects.get(user = request.user)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        formdata = request.data['params']
+        formdata.update({'student_id': student.id})
+        p = PIQForm.objects.create(**formdata)
+        return Response(data={'detail':"Created"}, status=status.HTTP_201_CREATED)
+
+
+    @action(detail=True, methods=['POST'])
+    def update_form(self, request, pk):
+        try:
+            student = Student.objects.get(user = request.user)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+
+        formdata = request.data['params']
+        formdata.update({'student_id': student.id})
+        piqForm = PIQForm.objects.filter(id=pk)
+        if piqForm.exists():
+            piqForm.update(**formdata)
+            return Response(data={'detail':"Updated"}, status=status.HTTP_202_ACCEPTED)
+        return Response(data={'detail':"Updated"}, status=status.HTTP_204_NO_CONTENT)

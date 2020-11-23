@@ -1,6 +1,7 @@
 from django.db import models
 from api.models import User
 from assessor.models  import Assessor, Department
+from army_backend.utils import upload_image
 
 
 class State(models.Model):
@@ -102,6 +103,11 @@ class Student(models.Model):
     first_name = models.CharField(max_length=64)
     middle_name = models.CharField(max_length=64, null=True, blank=True)
     last_name = models.CharField(max_length=64, null=True, blank=True)
+    image = models.ImageField(
+        verbose_name='Upload Your \nProfile Picture', upload_to=upload_image,
+        null=True, blank=True
+        # , validators=[image_extension_validator]
+    )
     gender = models.IntegerField(choices=GENDER_CHOICES, default=Gender.MALE)
     dob = models.DateField(verbose_name='DOB')
     occupation = models.ForeignKey(Occupation, on_delete=models.CASCADE)
@@ -156,7 +162,10 @@ STATUS_CHOICES = [
 ]
 
 class TestImages(models.Model):
-    image = models.URLField(verbose_name='question image')
+    image = models.ImageField(
+        verbose_name='Upload Question Image', upload_to=upload_image,
+        null=True, blank=True
+    )
 
     def __str__(self):
         return str(self.image)
@@ -166,12 +175,6 @@ class TestQuestion(models.Model):
     word = models.CharField(max_length=20, blank=True, null=True)
     text = models.CharField(max_length=120, blank=True, null=True)
     images = models.ManyToManyField(TestImages, blank=True)
-
-    # def save(self, *args, **kwargs):
-    #     if (self.word and self.text) or (self.images and self.text) or (self.word and self.images):
-    #         raise  ValueError("Set Only One Thing For Test Question")
-    #     else:
-    #         super().save(*args,**kwargs)
 
     def __str__(self):
         if self.word:
@@ -224,3 +227,98 @@ class Instruction(models.Model):
 
     # def  __str__(self):
     #     return self.assessor
+
+
+class PIQForm(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    oir = models.CharField(max_length=56, null=True, blank=True)
+    selection_board = models.CharField(max_length=56, null=True, blank=True)
+    batch = models.CharField(max_length=56, null=True, blank=True)
+    chest = models.CharField(max_length=56, null=True, blank=True)
+    roll_no = models.CharField(max_length=56, null=True, blank=True)
+    name = models.CharField(max_length=56, null=True, blank=True)
+    father = models.CharField(max_length=56, null=True, blank=True)
+    maximum_residence = models.CharField(max_length=56, null=True, blank=True)
+    present_residence = models.CharField(max_length=56, null=True, blank=True)
+    permanent_residence = models.CharField(max_length=56, null=True, blank=True)
+    district_hq = models.CharField(max_length=56, null=True, blank=True)
+    state_district = models.CharField(max_length=56, null=True, blank=True)
+    religion = models.CharField(max_length=56, null=True, blank=True)
+    cast = models.CharField(max_length=56, null=True, blank=True)
+    mother_tongue = models.CharField(max_length=56, null=True, blank=True)
+    dob = models.CharField(max_length=56, null=True, blank=True)
+    marital_status = models.CharField(max_length=56, null=True, blank=True)
+    parents_alive = models.CharField(max_length=56, null=True, blank=True)
+    age_at_time_death = models.CharField(max_length=56, null=True, blank=True)
+    father_education = models.CharField(max_length=56, null=True, blank=True)
+    father_occupation = models.CharField(max_length=56, null=True, blank=True)
+    father_income = models.CharField(max_length=56, null=True, blank=True)
+    mother_education = models.CharField(max_length=56, null=True, blank=True)
+    mother_occupation = models.CharField(max_length=56, null=True, blank=True)
+    mother_income = models.CharField(max_length=56, null=True, blank=True)
+    guardian_education = models.CharField(max_length=56, null=True, blank=True)
+    guardian_occupation = models.CharField(max_length=56, null=True, blank=True)
+    guardian_income = models.CharField(max_length=56, null=True, blank=True)
+    sibling1_education = models.CharField(max_length=56, null=True, blank=True)
+    sibling1_occupation = models.CharField(max_length=56, null=True, blank=True)
+    sibling1_income = models.CharField(max_length=56, null=True, blank=True)
+    sibling2_education = models.CharField(max_length=56, null=True, blank=True)
+    sibling2_occupation = models.CharField(max_length=56, null=True, blank=True)
+    sibling2_income = models.CharField(max_length=56, null=True, blank=True)
+    sibling3_education = models.CharField(max_length=56, null=True, blank=True)
+    sibling3_occupation = models.CharField(max_length=56, null=True, blank=True)
+    sibling3_income = models.CharField(max_length=56, null=True, blank=True)
+    institute_matric = models.CharField(max_length=56, null=True, blank=True)
+    institute_secondary = models.CharField(max_length=56, null=True, blank=True)
+    institute_graduation = models.CharField(max_length=56, null=True, blank=True)
+    institute_pg = models.CharField(max_length=56, null=True, blank=True)
+    university_matric = models.CharField(max_length=56, null=True, blank=True)
+    university_secondary = models.CharField(max_length=56, null=True, blank=True)
+    university_graduation = models.CharField(max_length=56, null=True, blank=True)
+    university_pg = models.CharField(max_length=56, null=True, blank=True)
+    year_matric = models.CharField(max_length=56, null=True, blank=True)
+    year_secondary = models.CharField(max_length=56, null=True, blank=True)
+    year_graduation = models.CharField(max_length=56, null=True, blank=True)
+    year_pg = models.CharField(max_length=56, null=True, blank=True)
+    div_matric = models.CharField(max_length=56, null=True, blank=True)
+    div_secondary = models.CharField(max_length=56, null=True, blank=True)
+    div_graduation = models.CharField(max_length=56, null=True, blank=True)
+    div_pg = models.CharField(max_length=56, null=True, blank=True)
+    medium_matric = models.CharField(max_length=56, null=True, blank=True)
+    medium_secondary = models.CharField(max_length=56, null=True, blank=True)
+    medium_graduation = models.CharField(max_length=56, null=True, blank=True)
+    medium_pg = models.CharField(max_length=56, null=True, blank=True)
+    scholar_matric = models.CharField(max_length=56, null=True, blank=True)
+    scholar_secondary = models.CharField(max_length=56, null=True, blank=True)
+    scholar_graduation = models.CharField(max_length=56, null=True, blank=True)
+    scholar_pg = models.CharField(max_length=56, null=True, blank=True)
+    achievement_matric = models.CharField(max_length=56, null=True, blank=True)
+    achievement_secondary = models.CharField(max_length=56, null=True, blank=True)
+    achievement_graduation = models.CharField(max_length=56, null=True, blank=True)
+    achievement_pg = models.CharField(max_length=56, null=True, blank=True)
+    age = models.CharField(max_length=56, null=True, blank=True)
+    height = models.CharField(max_length=56, null=True, blank=True)
+    weight = models.CharField(max_length=56, null=True, blank=True)
+    occupation = models.CharField(max_length=56, null=True, blank=True)
+    income = models.CharField(max_length=56, null=True, blank=True)
+    ncc = models.CharField(max_length=56, null=True, blank=True)
+    wing = models.CharField(max_length=56, null=True, blank=True)
+    training = models.CharField(max_length=56, null=True, blank=True)
+    division = models.CharField(max_length=56, null=True, blank=True)
+    certificate = models.CharField(max_length=56, null=True, blank=True)
+    game_name = models.CharField(max_length=56, null=True, blank=True)
+    game_duration = models.CharField(max_length=56, null=True, blank=True)
+    game_place = models.CharField(max_length=56, null=True, blank=True)
+    game_achievement = models.CharField(max_length=56, null=True, blank=True)
+    hobbies = models.CharField(max_length=56, null=True, blank=True)
+    extra_activity_name = models.CharField(max_length=56, null=True, blank=True)
+    extra_activity_duration = models.CharField(max_length=56, null=True, blank=True)
+    extra_activity_achievement = models.CharField(max_length=56, null=True, blank=True)
+    position = models.CharField(max_length=56, null=True, blank=True)
+    nature_of_commission = models.CharField(max_length=56, null=True, blank=True)
+    services = models.CharField(max_length=56, null=True, blank=True)
+    number_chances = models.CharField(max_length=56, null=True, blank=True)
+    interview_entry = models.CharField(max_length=56, null=True, blank=True)
+    interview_no_place = models.CharField(max_length=56, null=True, blank=True)
+    interview_date = models.CharField(max_length=56, null=True, blank=True)
+    interview_chest_batch = models.CharField(max_length=56, null=True, blank=True)

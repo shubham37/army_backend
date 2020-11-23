@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from student.views import StateViewSet, CityViewSet,  PincodeViewSet,  \
     PostofficeViewSet, AddressView, SecurityQuestionView, OccupationView, \
         StudentProfile, StreamScheduleViewSet, TestView, TestSubmissions, \
-            ProgressReport
+            ProgressReport, PIQViewSet
 
 router = DefaultRouter()
 
@@ -19,7 +19,7 @@ urlpatterns = [
 
 # router.register(r'dept_test', Test)
 router.register(r'tests', TestSubmissions)
-
+router.register(r'piq', PIQViewSet)
 router.register(r'state', StateViewSet)
 router.register(r'city', CityViewSet)
 router.register(r'pincode', PincodeViewSet)

@@ -2,8 +2,9 @@ from django.conf.urls import url, include
 
 from rest_framework.routers import DefaultRouter
 from assessor.views import AvailabilityViewSet, BriefcaseViewSet, \
-    AssessorDept, AssessorProfile, DepartmentViewSet, PositionViewSet, \
-        AssessorInstruction, TestChecking, Rating
+    AssessorDept, AssessorProfile, \
+        DepartmentViewSet, PositionViewSet, AssessorInstruction, TestChecking, \
+            Rating
 
 router = DefaultRouter()
 
