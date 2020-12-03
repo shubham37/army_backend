@@ -1,4 +1,5 @@
 import random
+import uuid
 import datetime
 from django.shortcuts import render
 from django.db.models import Q, Avg, Sum
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
-from api.models import User, Role, CurrentAffair
+from api.models import User, Role, CurrentAffair, FreeTest
 from student.models import Student, Address, PostOffice, StreamSchedule
 from api.permissions import IsStudentAuthenticated
 from api.serializers import CurrentAffairSerializer
@@ -134,11 +135,14 @@ class ForgotPassword(APIView):
             Api for Sent Reset Password Link To User Email.
         """
         try:
-            email = request.data.get('email',None)
-            if email is not None:
+            input_email = request.data.get('email','')
+            # user = User.objects.filter(email=input_email)
+            # if user.exists():
+            if input_email:
                 subject = "Reset Password Link"
-                body = "Hi,\n Please find link.\n\nThanks & Regards\n Army"
-                email = EmailMessage(subject=subject, body=body, to=(email,))
+                link = 'http://localhost:3000/reset_password/' + str(uuid.uuid4()) + "/1"
+                body = "Hi,\n Please find link.\n" + link + "\n\nThanks & Regards\n Army"
+                email = EmailMessage(subject=subject, body=body, to=('shubhampratapcool13@gmail.com',))
                 try:
                     email.send()
                     return Response(data={'detail':"Link has been sent to email.Please check."}, status=status.HTTP_200_OK)
@@ -160,19 +164,13 @@ class ResetPassword(APIView):
         """
         password = str(request.data.get('pwd'))
         confirm_password = str(request.data.get('cnfrm_pwd'))
-        email = str(request.data.get('email'))
-        if password and confirm_password and email:
-            if password == confirm_password:
-                user = User.objects.filter(email=email)
-                if user:
-                    user.update(password=password)
-                    return Response(data={'detail':"Password Has Been Changed."}, status=status.HTTP_202_ACCEPTED)
-                else:
-                    return Response(data={'detail':"Please Try Again."}, status=status.HTTP_304_NOT_MODIFIED)
-            else:
-                return Response(data={'detail':"Password & ConfirmPassword Should Be Match."}, status=status.HTTP_400_BAD_REQUEST)
+        user_id = int(request.data.get('id'))
+        user = User.objects.filter(id=user_id)
+        if user.exists():
+            user.update(password=password)
+            return Response(data={'detail':"Password Has Been Changed."}, status=status.HTTP_202_ACCEPTED)
         else:
-            return Response(data={'detail':"Please check details."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'detail':"Please Try Again."}, status=status.HTTP_304_NOT_MODIFIED)
 
 
 class LogOut(APIView):
@@ -214,11 +212,15 @@ class SendOTP(APIView):
         otp = random.randint(1000,9999)
 
         if email:
+            is_exam_taken = FreeTest.objects.filter(email= email)
+            if is_exam_taken:
+                return Response(data={'detail':"Already Exam Taken."}, status=status.HTTP_202_ACCEPTED)
             subject = "OTP To Enter Into Test"
             body = "Hi,\n Here is your requested otp: \n  {} \n\nThanks & Regards\n Army".format((otp))
-            email = EmailMessage(subject=subject, body=body, to=(email,))
+            Email = EmailMessage(subject=subject, body=body, to=(email,))
             try:
-                email.send()
+                Email.send()
+                f = FreeTest.objects.create(email=email)
                 return Response(data={'detail':"OTP has been sent to email.Please check.", "OTP":otp}, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

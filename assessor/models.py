@@ -2,7 +2,7 @@ import uuid
 import datetime
 from django.db import models
 from api.models  import User, Role
-from army_backend.utils import upload_image
+from army_backend.utils import upload_image, upload_file
 
 class Gender:
     MALE=1
@@ -96,10 +96,10 @@ FILETYPE_CHOICES = [
 
 class Briefcase(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
-    file_url = models.URLField(verbose_name='document', null=True, blank=True)
-    file_name = models.CharField(max_length=128)
-    file_size = models.CharField(max_length=48, default='1')
-    file_type = models.IntegerField(choices=FILETYPE_CHOICES, default=FileType.DOCUMENT)
+    file = models.FileField(
+        verbose_name='Upload Your File', upload_to=upload_file,
+        null=True, blank=True
+    )
 
     def str(self):
-        return str(self.file_name)
+        return str(self.file)

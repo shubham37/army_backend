@@ -67,3 +67,9 @@ class CurrentAffair(models.Model):
     def __str__(self):
         return str(self.text)
 
+
+class FreeTest(models.Model):
+    email = models.EmailField(verbose_name='Free Test Email', max_length=24)
+
+    def __str__(self):
+        return self.email

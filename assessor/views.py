@@ -165,18 +165,13 @@ class BriefcaseViewSet(ViewSet):
     @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
     def uploadfile(self, request):
         user = request.user
-        assessor = Assessor.objects.get(user=user)
-        data = request.data
-        data['assessor_id'] = assessor.id
         try:
-            if '.mp4' in data.get('file_name') or '.avi' in  data.get('file_name'):
-                data.update({'file_type':1})
-            elif '.doc' in data.get('file_name') or '.docs' in  data.get('file_name'):
-                data.update({'file_type':2})
-            elif '.jpeg' in data.get('file_name') or '.png' in  data.get('file_name'):
-                data.update({'file_type':3})
-
-            br = Briefcase.objects.create(**data)
+            assessor = Assessor.objects.get(user=user)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+        file = request.data.get('file')
+        try:
+            br = Briefcase.objects.create(file=file, assessor_id=assessor.id)
             return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
