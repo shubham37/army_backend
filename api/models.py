@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from api.manager import  UserManager
+from army_backend.utils import upload_image
 
 
 class Role:
@@ -73,3 +74,13 @@ class FreeTest(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class HeaderImage(models.Model):
+    image = models.ImageField(
+        verbose_name='Upload Header Picture', upload_to=upload_image,
+        null=True, blank=True
+    )
+
+    def __str__(self):
+        return str(self.image)

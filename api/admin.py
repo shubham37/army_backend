@@ -1,5 +1,5 @@
 from django.contrib import admin
-from api.models import User, CurrentAffair
+from api.models import User, CurrentAffair, HeaderImage
 
 
 class UserAdmin(admin.ModelAdmin):
@@ -10,3 +10,4 @@ class UserAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 admin.site.register(CurrentAffair)
+admin.site.register(HeaderImage)

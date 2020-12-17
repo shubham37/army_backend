@@ -11,10 +11,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
-from api.models import User, Role, CurrentAffair, FreeTest
+from api.models import User, Role, CurrentAffair, FreeTest, HeaderImage
 from student.models import Student, Address, PostOffice, StreamSchedule
 from api.permissions import IsStudentAuthenticated
-from api.serializers import CurrentAffairSerializer
+from api.serializers import CurrentAffairSerializer, HeaderImageSerializer
 
 
 class Signup(APIView):
@@ -250,6 +250,27 @@ class CurrentAffairView(APIView):
             response.update({
                 'is_exist':False,
                 'ca': []
+            })
+        return  Response(data=response, status=status.HTTP_200_OK)
+
+class HeaderImagesView(APIView):
+    permission_classes = [AllowAny, ]
+    serializer_classes = HeaderImageSerializer
+
+    def get(self, request):
+        response = {}
+
+        images = HeaderImage.objects.all()
+        if images.exists():
+            serialize = self.serializer_classes(images, many=True)
+            response.update({
+                'is_exist':True,
+                'images': serialize.data
+            })
+        else:
+            response.update({
+                'is_exist':False,
+                'images': []
             })
         return  Response(data=response, status=status.HTTP_200_OK)
 
