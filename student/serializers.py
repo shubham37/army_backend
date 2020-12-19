@@ -54,7 +54,8 @@ class OccupationSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
-        fields = ['id','first_name','middle_name','last_name','gender', 'image']
+        fields = '__all__'
+        depth = 1
 
 
 class StreamScheduleSerializer(serializers.ModelSerializer):

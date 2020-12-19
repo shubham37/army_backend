@@ -148,18 +148,39 @@ class BriefcaseViewSet(ViewSet):
         user = request.user
         query_set = self.queryset.filter(assessor__user=user)
         if query_set.exists():
-            serialize = self.serializer_class(query_set, many=True)
-            briefcases = serialize.data
-            is_success = True
-        else:
-            briefcases = None
-            is_success = False
+            response = {
+                'is_data': False,
+                'videos': [],
+                'documents': [],
+                'images': []
+            }
 
-        context = {
-            "is_success": is_success,
-            "briefcases": briefcases
-        }
-        return Response(context, status=status.HTTP_200_OK)
+            videos = query_set.filter(extention = 'V')
+            images = query_set.filter(extention = 'I')
+            documents = query_set.filter(extention = 'D')
+
+            if videos.exists():
+                serialize = self.serializer_class(videos, many=True)
+                response.update({
+                    'is_data': True,
+                    'videos': serialize.data
+                })
+
+            if images.exists():
+                serialize = self.serializer_class(images, many=True)
+                response.update({
+                    'is_data': True,
+                    'images': serialize.data
+                })
+
+            if documents.exists():
+                serialize = self.serializer_class(documents, many=True)
+                response.update({
+                    'is_data': True,
+                    'documents': serialize.data
+                })
+            return Response(response, status=status.HTTP_200_OK)
+        return Response(data={'detail': 'No Data'}, status=status.HTTP_404_NOT_FOUND)
 
 
     @action(detail=False, methods=['POST'], permission_classes=[IsAssessorAuthenticated, ])
@@ -169,9 +190,20 @@ class BriefcaseViewSet(ViewSet):
             assessor = Assessor.objects.get(user=user)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_401_UNAUTHORIZED)
+
         file = request.data.get('file')
+        filename = file.name
+        filesize = file.size
+        content_type = str(file.content_type)
+        filetype = 'Unknown'
+        if content_type.split('/')[0] == 'application':
+            filetype = 'D'
+        if content_type.split('/')[0] == 'image':
+            filetype = 'I'
+        if content_type.split('/')[0] == 'video':
+            filetype = 'V'
         try:
-            br = Briefcase.objects.create(file=file, assessor_id=assessor.id)
+            br = Briefcase.objects.create(file=file, assessor_id=assessor.id, title=filename, extention=filetype, size=filesize)
             return Response(data={'detail':"Uploaded Successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(data={'error':e}, status=status.HTTP_400_BAD_REQUEST)
@@ -318,10 +350,30 @@ class TestChecking(ViewSet):
     def list(self, request):
         assessor = Assessor.objects.get(user=request.user)
         students = StreamSchedule.objects.filter(assessor=assessor).values_list('student_id')
-        tests = self.queryset.filter(student_id__in=students,submission_status=2, checking_status=1)
+        tests = self.queryset.filter(student_id__in=students,submission_status=2)
         if tests:
-            serialize = self.serializer_class(tests, many=True)
-            return Response(data={'is_data':True, 'tests':serialize.data}, status=status.HTTP_200_OK)
+            pending = tests.filter(checking_status=1)
+            done = tests.filter(checking_status=2)
+
+            response = {
+                'pending': [],
+                'done': [],
+                'is_data':True
+            }
+
+            if pending:
+                serialize = self.serializer_class(pending, many=True)
+                response.update({
+                    'pending': serialize.data
+                })
+
+            if done:
+                serialize = self.serializer_class(done, many=True)
+                response.update({
+                    'done': serialize.data
+                })
+
+            return Response(data=response, status=status.HTTP_200_OK)
         else:
             return Response(data={'is_data':False, 'detail':"No Data Exist"}, status=status.HTTP_200_OK)
         

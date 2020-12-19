@@ -82,24 +82,16 @@ class Availability(models.Model):
         return str(self.assessor)
 
 
-class FileType:
-    VIDEO=1
-    DOCUMENT=2
-    IMAGE=3
-
-FILETYPE_CHOICES = [
-    (FileType.VIDEO, 'Video'),
-    (FileType.DOCUMENT, 'Document'),
-    (FileType.IMAGE, 'Image')
-]
-
-
 class Briefcase(models.Model):
     assessor = models.ForeignKey(Assessor, on_delete=models.ForeignKey, null=True, blank=True)
     file = models.FileField(
         verbose_name='Upload Your File', upload_to=upload_file,
         null=True, blank=True
     )
+    title = models.CharField(max_length=50, default='Unknown', null=True, blank=True)
+    extention = models.CharField(max_length=10, default='mp4', null=True, blank=True)
+    size = models.IntegerField(verbose_name='Size in KB', default=0)
+
 
     def str(self):
         return str(self.file)

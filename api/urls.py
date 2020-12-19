@@ -1,7 +1,7 @@
 from django.conf.urls import url, include
 from api.views import Signup, Login, ForgotPassword, \
     ResetPassword, LogOut, Plan, SendOTP, CurrentAffairView, \
-        AssessorStar, HeaderImagesView
+        AssessorStar, HeaderImagesView, ContactView, VideoView
 
 
 urlpatterns = [
@@ -14,5 +14,7 @@ urlpatterns = [
     url(r'^send_otp/', SendOTP.as_view(), name='send_otp'),
     url(r'^current_affair/(?P<cat>\D+)/', CurrentAffairView.as_view(), name='current_affair'),
     url(r'^stars/', AssessorStar.as_view(), name='star_of_the_day'),
+    url(r'^contact/', ContactView.as_view(), name='contact_form'),
     url(r'^images/', HeaderImagesView.as_view(), name='header_images'),
+    url(r'^videos/(?P<cat>\D+)/', VideoView.as_view(), name='videos'),
 ]

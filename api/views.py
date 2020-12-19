@@ -11,10 +11,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 
-from api.models import User, Role, CurrentAffair, FreeTest, HeaderImage
+from api.models import User, Role, CurrentAffair, FreeTest, HeaderImage, \
+    RollOfHonor, CustomerQuery, Notification, VideoContent
 from student.models import Student, Address, PostOffice, StreamSchedule
 from api.permissions import IsStudentAuthenticated
-from api.serializers import CurrentAffairSerializer, HeaderImageSerializer
+from api.serializers import CurrentAffairSerializer, HeaderImageSerializer, \
+    RollOfHonorSerializer, VideoContentSerializer
 
 
 class Signup(APIView):
@@ -253,6 +255,7 @@ class CurrentAffairView(APIView):
             })
         return  Response(data=response, status=status.HTTP_200_OK)
 
+
 class HeaderImagesView(APIView):
     permission_classes = [AllowAny, ]
     serializer_classes = HeaderImageSerializer
@@ -277,34 +280,88 @@ class HeaderImagesView(APIView):
 
 class AssessorStar(APIView):
     permission_classes = [AllowAny, ]
-    serializer_classes = CurrentAffairSerializer
+    serializer_classes = RollOfHonorSerializer
 
     def get(self, request):
         response = {
             'is_exist': False,
-            'assessor': [],
-            'assessors': []
+            'today': [],
+            'evergreen': [],
+            'notification': ''
         }
 
-        assessor = StreamSchedule.objects.filter(
-            start_time__date=datetime.datetime.today()
-        ).values(
-            'assessor__first_name', 'assessor__last_name', 'assessor__user__email', 'assessor__image'
-        ).annotate(Avg('rating')).order_by('rating__avg')
+        today = RollOfHonor.objects.filter(
+            choice='Star of Today'            
+        )
 
-        assessors = StreamSchedule.objects.values(
-            'assessor__first_name', 'assessor__last_name', 'assessor__user__email', 'assessor__image'
-        ).annotate(Avg('rating')).order_by('rating__avg')
+        evergreen = RollOfHonor.objects.filter(
+            choice='Evergreen Stars'
+        )
 
-        if assessor.exists():
+        notification = Notification.objects.last()
+
+        if today.exists():
+            today = self.serializer_classes(today, many=True)
             response.update({
                 'is_exist':True,
-                'assessor': list(assessor)[:1]
+                'today': today.data
             })
-        if assessors.exists():
+        if evergreen.exists():
+            evergreen = self.serializer_classes(evergreen, many=True)
             response.update({
                 'is_exist':True,
-                'assessors': list(assessors)[:3]
+                'evergreen': evergreen
+            })
+
+        if notification:
+            response.update({
+                'is_exist':True,
+                'notification': notification.msg
             })
 
         return  Response(data=response, status=status.HTTP_200_OK)
+
+class ContactView(APIView):
+    permission_classes = [AllowAny,]
+
+    def post(self, request):
+        try:
+            data = request.data
+            if data:
+                quer = CustomerQuery.objects.create(**data.dict())
+                return Response(data={'detail': 'Query Saved'}, status=status.HTTP_201_CREATED)
+            return Response(data={'detail': 'Problem'}, status=status.HTTP_404_BAD_REQUEST)
+        except Exception as e:
+            return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VideoView(APIView):
+    permission_classes = [AllowAny,]
+    serializer_classes = VideoContentSerializer
+
+    def get(self, request, cat):
+        videos = VideoContent.objects.filter(category=cat)
+        if videos:
+            response = {
+                'training': [],
+                'practice': []
+            }
+
+            trainings = videos.filter(tag='Training')
+            practices = videos.filter(tag='Practice')
+
+            if trainings:
+                serialize = self.serializer_classes(trainings, many=True)
+                response.update({
+                    'training': serialize.data
+                })
+
+            if practices:
+                serialize = self.serializer_classes(practices, many=True)
+                response.update({
+                    'practice': serialize.data
+                })
+
+            return Response(data=response, status=status.HTTP_200_OK)
+        return Response(data={'detail': 'No Video Content'}, status=status.HTTP_404_NOT_FOUND)
+
