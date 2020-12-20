@@ -1,6 +1,7 @@
 import random
 import uuid
 import datetime
+from django.conf import settings
 from django.shortcuts import render
 from django.db.models import Q, Avg, Sum
 from django.core.mail import EmailMessage
@@ -365,3 +366,21 @@ class VideoView(APIView):
             return Response(data=response, status=status.HTTP_200_OK)
         return Response(data={'detail': 'No Video Content'}, status=status.HTTP_404_NOT_FOUND)
 
+
+class MadeQueryView(APIView):
+    permission_classes = [AllowAny,]
+
+    def post(self, request):
+        data = request.data
+        if data:
+            data = data.dict()
+            email = settings.MADE_TEAM_EMAIL
+            subject = "Customer Query From {}".format((data.get('name')))
+            body = "Hi Team,\n\n Name: {0}\n Contact: {1} \n Query: {2} \n\nThanks & Regards".format(data.get('name'), data.get('number'), data.get('query'))
+            email = EmailMessage(subject=subject, body=body, to=(email,))
+            try:
+                email.send()
+                return Response(data={'detail': 'Query Saved'}, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(data={'error':e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(data={'detail': 'Data Not Exist'}, status=status.HTTP_404_BAD_REQUEST)
