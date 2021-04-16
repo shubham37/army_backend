@@ -185,12 +185,20 @@ class TestQuestion(models.Model):
             return str('images')
 
 
+class TestInstruction(models.Model):
+    text = models.CharField(verbose_name='Instruction', max_length=100)
+
+    def __str__(self):
+        return str(self.text)[:25]
+
+
 class Test(models.Model):
     code = models.CharField(verbose_name='Test', max_length=10)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE)
     question_display_time = models.IntegerField(default=0)
     answer_display_time = models.IntegerField(default=0)
+    instructions = models.ManyToManyField(TestInstruction, blank=True)
 
     def __str__(self):
         return str(self.code)
