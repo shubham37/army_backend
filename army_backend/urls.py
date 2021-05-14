@@ -10,7 +10,7 @@ urlpatterns = [
     url(r'^student_api/', include('student.urls')),
     url(r'^assessor_api/', include('assessor.urls')),
     url(r'^admin_api/', include('admin_user.urls')),
-    url(r'^$', TemplateView.as_view(template_name='index.html')),
+    url(r'^app/', TemplateView.as_view(template_name='index.html')),
 ]
 
 urlpatterns+= static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

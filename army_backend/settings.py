@@ -108,16 +108,15 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATIC_URL = os.path.join(BASE_DIR, "static")
+STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
-MEDIA_URL = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "build"),
-    os.path.join(BASE_DIR, "build/static")
-)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "build/static"),
+]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
